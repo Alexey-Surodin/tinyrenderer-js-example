@@ -31,6 +31,13 @@ export class Color {
     this.a *= color.a / 255;
     return this;
   }
+
+  mulScalar(n: number): this {
+    this.r *= n;
+    this.g *= n;
+    this.b *= n;
+    return this;
+  }
 }
 
 export class Vec2 {
@@ -106,6 +113,79 @@ export class Vec3 {
     this.x = Math.round(this.x);
     this.y = Math.round(this.y);
     this.z = Math.round(this.z);
+    return this;
+  }
+}
+
+export class Matrix4 {
+  data: Array<number> = new Array(16).fill(0);
+
+  identity(): this {
+    this.data.fill(0);
+    this.data[0] = 1;
+    this.data[5] = 1;
+    this.data[10] = 1;
+    this.data[15] = 1;
+    return this;
+  }
+
+  multiply(m: Matrix4): this {
+
+    const a = Array.from(this.data);
+    const b = m.data;
+
+    for (let i = 0; i < 4; i++) {
+      this.data[i] = a[0] * b[i] + a[1] * b[i + 4] + a[2] * b[i + 8] + a[3] * b[i + 12];
+      this.data[i + 4] = a[4] * b[i] + a[5] * b[i + 4] + a[6] * b[i + 8] + a[7] * b[i + 12];
+      this.data[i + 8] = a[8] * b[i] + a[9] * b[i + 4] + a[10] * b[i + 8] + a[11] * b[i + 12];
+      this.data[i + 12] = a[12] * b[i] + a[13] * b[i + 4] + a[14] * b[i + 8] + a[15] * b[i + 12];
+    }
+
+    return this;
+  }
+
+  multiplyVec3(b: Vec3): Vec3 {
+    const r = new Vec3();
+    const a = this.data;
+
+    r.x = a[0] * b.x + a[1] * b.y + a[2] * b.z + a[3];
+    r.y = a[4] * b.x + a[5] * b.y + a[6] * b.z + a[7];
+    r.z = a[8] * b.x + a[9] * b.y + a[10] * b.z + a[11];
+
+    const w = a[12] * b.x + a[13] * b.y + a[14] * b.z + a[15];
+    r.mulScalar(1 / w);
+
+    return r;
+  }
+
+  clone():Matrix4{
+    const m = new Matrix4();
+    m.data = Array.from(this.data);
+    return m;
+  }
+
+  transpose():this{
+    const d = Array.from(this.data);
+
+    d[1] = this.data[4];
+    d[4] = this.data[1];
+
+    d[2] = this.data[8];
+    d[8] = this.data[2];
+
+    d[3] = this.data[12];
+    d[12] = this.data[3];
+
+    d[6] = this.data[9];
+    d[9] = this.data[6];
+
+    d[7] = this.data[13];
+    d[13] = this.data[7];
+
+    d[11] = this.data[14];
+    d[14] = this.data[11];
+
+    this.data = d;
     return this;
   }
 }
