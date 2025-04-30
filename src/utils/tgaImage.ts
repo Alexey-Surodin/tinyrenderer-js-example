@@ -156,6 +156,13 @@ export function getTexturePixel(point: Vec3, texture: TgaImage): Color {
   }
 
   return color;
+}
 
-  return new Color();
+export async function readTexture(path: string | URL): Promise<TgaImage> {
+
+  const file = await fetch(path);
+
+  const byteArray = await file.bytes();
+
+  return readTgaImage(byteArray);
 }
