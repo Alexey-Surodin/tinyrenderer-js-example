@@ -1,10 +1,14 @@
+import { generateTestTexture, TgaImage } from "../utils/tgaImage";
+
 export class Model {
   vert = Array<Array<number>>();
   text = Array<Array<number>>();
   norm = Array<Array<number>>();
   faces = Array<Array<Array<number>>>();
 
-  constructor(text: string) {
+  texture?: TgaImage;
+
+  parse(text: string): this {
 
     const lines = text.split(/\r?\n/);
 
@@ -32,18 +36,30 @@ export class Model {
       }
       else if (str[0] == 'vt') {
         let t = new Array<number>();
-        for (let i = 1; i < str.length; i++){
+        for (let i = 1; i < str.length; i++) {
           t.push(parseFloat(str[i]));
         }
         this.text.push(t);
       }
       else if (str[0] == 'vn') {
         let n = new Array<number>();
-        for (let i = 1; i < str.length; i++){
+        for (let i = 1; i < str.length; i++) {
           n.push(parseFloat(str[i]));
         }
         this.norm.push(n);
       }
     }
+
+    return this;
   }
+}
+
+export function getTestModel(): Model {
+  const model = new Model();
+  model.vert = [[-1, -1, 1], [1, -1, 1], [1, -1, -1], [-1, -1, -1]];
+  model.text = [[0, 0, 0], [0.9, 0, 0], [0.9, 0.9, 0], [0, 0.9, 0]];
+  model.norm = [[0, 1, 0]];
+  model.faces = [[[0, 0, 0], [1, 1, 0], [2, 2, 0]], [[0, 0, 0], [2, 2, 0], [3, 3, 0]]];
+  model.texture = generateTestTexture(200, 200, 20);
+  return model;
 }

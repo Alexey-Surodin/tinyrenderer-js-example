@@ -1,3 +1,21 @@
+import { TgaImage } from "./tgaImage";
+
+export type Triangle = {
+  p0: Vec4;
+  p1: Vec4;
+  p2: Vec4;
+
+  t0: Vec3;
+  t1: Vec3;
+  t2: Vec3;
+
+  n0: Vec3;
+  n1: Vec3;
+  n2: Vec3;
+
+  texture?: TgaImage,
+  color?: Color,
+}
 
 export async function getCanvas(): Promise<HTMLCanvasElement> {
   const canvas = document.querySelector("canvas");
@@ -117,6 +135,78 @@ export class Vec3 {
   }
 }
 
+export class Vec4 {
+  constructor(public x: number = 0, public y: number = 0, public z: number = 0, public w: number = 0) { }
+
+  sub(v: Vec4): this {
+    this.x -= v.x;
+    this.y -= v.y;
+    this.z -= v.z;
+    this.w -= v.w;
+    return this;
+  }
+
+  add(v: Vec4): this {
+    this.x += v.x;
+    this.y += v.y;
+    this.z += v.z;
+    this.w += v.w;
+    return this;
+  }
+
+  addScalar(n: number): this {
+    this.x += n;
+    this.y += n;
+    this.z += n;
+    this.w += n;
+    return this;
+  }
+
+  mul(v: Vec4): this {
+    this.x *= v.x;
+    this.y *= v.y;
+    this.z *= v.z;
+    this.w *= v.w;
+    return this;
+  }
+
+  mulScalar(n: number): this {
+    this.x *= n;
+    this.y *= n;
+    this.z *= n;
+    this.w *= n;
+    return this;
+  }
+
+  dot(v: Vec4): number {
+    return this.x * v.x + this.y * v.y + this.z * v.z + this.w * v.w;
+  }
+
+  clone(): Vec4 {
+    return new Vec4(this.x, this.y, this.z, this.w);
+  }
+
+  length(): number {
+    return Math.sqrt(this.x ** 2 + this.y ** 2 + this.z ** 2 + this.w ** 2);
+  }
+
+  norm(): this {
+    return this.mulScalar(1 / this.length());
+  }
+
+  divideW(): this {
+    return this.mulScalar(1 / this.w);
+  }
+
+  round(): this {
+    this.x = Math.round(this.x);
+    this.y = Math.round(this.y);
+    this.z = Math.round(this.z);
+    this.w = Math.round(this.w);
+    return this;
+  }
+}
+
 export class Matrix4 {
   data: Array<number> = new Array(16).fill(0);
 
@@ -158,13 +248,25 @@ export class Matrix4 {
     return r;
   }
 
-  clone():Matrix4{
+  multiplyVec4(b: Vec4): Vec4 {
+    const r = new Vec4();
+    const a = this.data;
+
+    r.x = a[0] * b.x + a[1] * b.y + a[2] * b.z + a[3];
+    r.y = a[4] * b.x + a[5] * b.y + a[6] * b.z + a[7];
+    r.z = a[8] * b.x + a[9] * b.y + a[10] * b.z + a[11];
+    r.w = a[12] * b.x + a[13] * b.y + a[14] * b.z + a[15];
+
+    return r;
+  }
+
+  clone(): Matrix4 {
     const m = new Matrix4();
     m.data = Array.from(this.data);
     return m;
   }
 
-  transpose():this{
+  transpose(): this {
     const d = Array.from(this.data);
 
     d[1] = this.data[4];

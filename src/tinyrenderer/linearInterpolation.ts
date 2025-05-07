@@ -1,21 +1,15 @@
-import { Vec3 } from "../utils/utils";
+import { Triangle, Vec3, Vec4 } from "../utils/utils";
 
-type Triangle = {
-  p0: Vec3;
-  p1: Vec3;
-  p2: Vec3;
+export function linearInterpolation(input: Triangle, vertexFunc: (tri: Triangle) => Triangle, fragmentFunc: (pos: Vec3, tex: Vec3, norm: Vec3) => void): void {
 
-  t0: Vec3;
-  t1: Vec3;
-  t2: Vec3;
+  const tri = vertexFunc(input);
 
-  n0: Vec3;
-  n1: Vec3;
-  n2: Vec3;
-}
+  const toVec3 = (v: Vec4): Vec3 => {
+    v.divideW().round();
+    return new Vec3(v.x, v.y, v.z);
+  };
 
-export function linearInterpolation(tri: Triangle, fragmentFunc: (pos: Vec3, tex: Vec3, norm: Vec3) => void): void {
-  const arr = [[tri.p0, tri.t0, tri.n0], [tri.p1, tri.t1, tri.n1], [tri.p2, tri.t2, tri.n2]].sort((a, b) => a[0].y - b[0].y);
+  const arr = [[toVec3(tri.p0), tri.t0, tri.n0], [toVec3(tri.p1), tri.t1, tri.n1], [toVec3(tri.p2), tri.t2, tri.n2]].sort((a, b) => a[0].y - b[0].y);
 
   let [p0, t0, n0] = arr[0];
   let [p1, t1, n1] = arr[1];

@@ -1,5 +1,5 @@
-import { Color, getCanvas } from "../utils/utils";
-import { Model } from "./model";
+import { Color, getCanvas, Triangle, Vec4 } from "../utils/utils";
+import { getTestModel, Model } from "./model";
 import { Vec3 } from "../utils/utils";
 import { getTexturePixel, TgaImage, readTexture } from "../utils/tgaImage";
 //@ts-ignore
@@ -8,27 +8,12 @@ import modelFile from "../static/model.txt";
 import textureFile from "../static/texture.tga";
 import { Camera } from "./camera";
 import { linearInterpolation } from "./linearInterpolation";
+import { barycentricInterpolation } from "./barycentricInterpolation";
 
 const black = new Color(0, 0, 0, 255);
 
 const camera = new Camera(new Vec3(0, 0, 2), new Vec3(0, 0, 0), new Vec3(0, 1, 0));
 const light_dir = new Vec3(0, 0, -1).norm();
-
-type Triangle = {
-  p0: Vec3;
-  p1: Vec3;
-  p2: Vec3;
-
-  t0: Vec3;
-  t1: Vec3;
-  t2: Vec3;
-
-  n0: Vec3;
-  n1: Vec3;
-  n2: Vec3;
-
-  texture: TgaImage;
-}
 
 function getPixelIndex(point: Vec3, width: number, height: number): number {
   let x = Math.round(point.x);
@@ -50,10 +35,10 @@ function setPixel(imageData: ImageData, point: Vec3, color: Color, zBuffer?: Uin
   }
 
   index *= 4;
-  imageData.data[index++] = color.r;
-  imageData.data[index++] = color.g;
-  imageData.data[index++] = color.b;
-  imageData.data[index] = color.a;
+  imageData.data[index++] = Math.round(color.r);
+  imageData.data[index++] = Math.round(color.g);
+  imageData.data[index++] = Math.round(color.b);
+  imageData.data[index] = Math.round(color.a);
 }
 
 function clearImage(imageData: ImageData, color: Color = black): void {
@@ -71,9 +56,9 @@ function drawTriangle(imageData: ImageData, tri: Triangle, zBuffer?: Uint8Clampe
   const vpInverse = proj.multiply(view).inverse().transpose();
 
   const vertFunc = function (tri: Triangle): Triangle {
-    tri.p0 = viewProjMatrix.multiplyVec3(tri.p0).round();
-    tri.p1 = viewProjMatrix.multiplyVec3(tri.p1).round();
-    tri.p2 = viewProjMatrix.multiplyVec3(tri.p2).round();
+    tri.p0 = viewProjMatrix.multiplyVec4(tri.p0);
+    tri.p1 = viewProjMatrix.multiplyVec4(tri.p1);
+    tri.p2 = viewProjMatrix.multiplyVec4(tri.p2);
 
     tri.n0 = vpInverse.multiplyVec3(tri.n0).norm();
     tri.n1 = vpInverse.multiplyVec3(tri.n1).norm();
@@ -82,22 +67,33 @@ function drawTriangle(imageData: ImageData, tri: Triangle, zBuffer?: Uint8Clampe
   }
 
   const fragFunc = function (p: Vec3, t: Vec3, n: Vec3): void {
+    let color: Color;
     const intensity = n.norm().dot(light_dir);
-    const color = getTexturePixel(t, tri.texture).mulScalar(intensity);
+
+    if (intensity < 0.001)
+      return;
+
+    if (tri.texture) {
+      color = getTexturePixel(t, tri.texture).mulScalar(intensity);
+    }
+    else if (tri.color) {
+      color = tri.color.mulScalar(intensity);
+    }
+    else {
+      color = new Color(intensity, intensity, intensity, 255).mulScalar(255);
+    }
     setPixel(imageData, p, color, zBuffer);
   }
 
-  linearInterpolation(vertFunc(tri), fragFunc);
+  //linearInterpolation(tri, vertFunc, fragFunc);
+  barycentricInterpolation(tri, vertFunc, fragFunc);
 }
 
-function drawModel(imageData: ImageData, model: Model, texture: TgaImage): void {
+function drawModel(imageData: ImageData, model: Model, zBuffer?: Uint8ClampedArray): void {
   const faces = model.faces;
   const vert = model.vert;
   const text = model.text;
   const norm = model.norm;
-
-  const zBuffer = new Uint8ClampedArray(imageData.height * imageData.width);
-  zBuffer.fill(255);
 
   const getVector = (array: number[][], index: number) =>
     new Vec3(array[index][0], array[index][1], array[index][2]);
@@ -124,9 +120,9 @@ function drawModel(imageData: ImageData, model: Model, texture: TgaImage): void 
     let n2 = getVector(norm, n_ind.z);
 
     let triangle: Triangle = {
-      p0: v0,
-      p1: v1,
-      p2: v2,
+      p0: new Vec4(v0.x, v0.y, v0.z, 1),
+      p1: new Vec4(v1.x, v1.y, v1.z, 1),
+      p2: new Vec4(v2.x, v2.y, v2.z, 1),
 
       t0: t0,
       t1: t1,
@@ -136,11 +132,11 @@ function drawModel(imageData: ImageData, model: Model, texture: TgaImage): void 
       n1: n1,
       n2: n2,
 
-      texture: texture,
+      texture: model.texture,
+      color: new Color().random()
     }
 
     drawTriangle(imageData, triangle, zBuffer);
-    //break;
   }
 }
 
@@ -156,12 +152,18 @@ export async function runTinyRenderer(): Promise<void> {
   const canvasRect = canvas.getBoundingClientRect();
 
   const imageData = context.createImageData(canvasRect.width, canvasRect.height);
+  const zBuffer = new Uint8ClampedArray(imageData.height * imageData.width);
+  zBuffer.fill(255);
 
   clearImage(imageData, black);
 
-  const model = new Model(modelFile);
-  const texture = await readTexture(textureFile);
-  drawModel(imageData, model, texture);
+  const model = new Model().parse(modelFile);
+  model.texture = await readTexture(textureFile);
+
+  const testModel = getTestModel();
+
+  drawModel(imageData, model, zBuffer);
+  drawModel(imageData, testModel, zBuffer);
 
   context.putImageData(imageData, 0, 0);
 }

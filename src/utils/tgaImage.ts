@@ -166,3 +166,35 @@ export async function readTexture(path: string | URL): Promise<TgaImage> {
 
   return readTgaImage(byteArray);
 }
+
+export function generateTestTexture(w: number, h: number, cellSize: number): TgaImage {
+  const header = new TgaHeader();
+  header.width = w;
+  header.height = h;
+  header.bitsperpixel = 3 * 8;
+
+  const imageData = new Uint8Array(w * h * 3);
+  const red = [255, 0, 0];
+  const green = [0, 255, 0];
+
+  let index = 0;
+
+  for (let y = 0; y < h; y++) {
+
+    for (let x = 0; x < w; x++) {
+
+      const oddX = Math.ceil(x / cellSize) % 2 == 0;
+      const oddY = Math.ceil(y / cellSize) % 2 == 0;
+
+      let color = oddX !== oddY ? red : green;
+      imageData[index++] = color[2];
+      imageData[index++] = color[1];
+      imageData[index++] = color[0];
+    }
+  }
+
+  return {
+    header: header,
+    imageData: imageData,
+  };
+}
