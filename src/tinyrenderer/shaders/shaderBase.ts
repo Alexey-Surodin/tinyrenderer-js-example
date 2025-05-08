@@ -13,7 +13,7 @@ export abstract class Shader<T extends UniformBase> {
   constructor(public uniform: T) { }
 
   abstract vertexFunc(tri: Triangle): Triangle;
-  abstract fragmentFunc(p: Vec3, t: Vec3, n: Vec3): { pxl: Vec3, color: Color } | null;
+  abstract fragmentFunc(p: Vec3, t: Vec3, n: Vec3, b?: Vec3): { pxl: Vec3, color: Color } | null;
 }
 
 export type ShaderBase = Shader<UniformBase>;

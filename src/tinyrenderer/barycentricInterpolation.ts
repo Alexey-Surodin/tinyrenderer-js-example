@@ -1,4 +1,4 @@
-import { Color, Triangle, Vec3, Vec4 } from "../utils/utils";
+import { Color, getBarycentricCoord, Triangle, Vec3 } from "../utils/utils";
 import { ShaderBase } from "./shaders/shaderBase";
 
 export function barycentricInterpolation(input: Triangle, shader: ShaderBase, onPixelCallback: (pxlData: { pxl: Vec3, color: Color }) => void): void {
@@ -53,20 +53,9 @@ export function barycentricInterpolation(input: Triangle, shader: ShaderBase, on
       const izn = tri.n0.clone().mulScalar(b0).add(tri.n1.clone().mulScalar(b1)).add(tri.n2.clone().mulScalar(b2));
       izn.mulScalar(z);
 
-      const pxlData = shader.fragmentFunc(v, izt, izn);
+      const pxlData = shader.fragmentFunc(v, izt, izn, new Vec3(b0, b1, b2).mulScalar(z));
       if (pxlData)
         onPixelCallback(pxlData);
     }
   }
-}
-
-function getBarycentricCoord(t1: Vec4, t2: Vec4, t3: Vec4, p: Vec3): Vec3 {
-  const v0 = new Vec3(t2.x - t1.x, t3.x - t1.x, t1.x - p.x);
-  const v1 = new Vec3(t2.y - t1.y, t3.y - t1.y, t1.y - p.y);
-  const res = v0.cross(v1);
-  if (Math.abs(res.z) > 0.001) {
-    res.mulScalar(1 / res.z)
-    return new Vec3(1 - res.x - res.y, res.x, res.y);
-  }
-  return new Vec3(-1, -1, -1);
 }

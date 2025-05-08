@@ -1,4 +1,4 @@
-import { Color, Triangle, Vec3, Vec4 } from "../utils/utils";
+import { Color, getBarycentricCoord, Matrix4, Triangle, Vec3, Vec4 } from "../utils/utils";
 import { ShaderBase } from "./shaders/shaderBase";
 
 export function linearInterpolation(input: Triangle, shader: ShaderBase, onPixelCallback: (pxlData: { pxl: Vec3, color: Color }) => void): void {
@@ -10,7 +10,11 @@ export function linearInterpolation(input: Triangle, shader: ShaderBase, onPixel
     return new Vec3(v.x, v.y, v.z);
   };
 
-  const arr = [[toVec3(tri.p0), tri.t0, tri.n0], [toVec3(tri.p1), tri.t1, tri.n1], [toVec3(tri.p2), tri.t2, tri.n2]].sort((a, b) => a[0].y - b[0].y);
+  const arr = [
+    [toVec3(tri.p0), tri.t0, tri.n0, new Vec3(1, 0, 0)],
+    [toVec3(tri.p1), tri.t1, tri.n1, new Vec3(0, 1, 0)],
+    [toVec3(tri.p2), tri.t2, tri.n2, new Vec3(0, 0, 1)]
+  ].sort((a, b) => a[0].y - b[0].y);
 
   let [p0, t0, n0] = arr[0];
   let [p1, t1, n1] = arr[1];
@@ -65,7 +69,15 @@ export function linearInterpolation(input: Triangle, shader: ShaderBase, onPixel
       let t = tr.clone().sub(tl).mulScalar(k).add(tl);
       let n = nr.clone().sub(nl).mulScalar(k).add(nl);
 
-      const pxlData = shader.fragmentFunc(p, t, n);
+      const bMat = new Matrix4().identity();
+      for (let i = 0; i < 3; i++) {
+        bMat.data[i] = arr[i][3].x;
+        bMat.data[i + 4] = arr[i][3].y;
+        bMat.data[i + 8] = arr[i][3].z;
+      }
+      const b = bMat.multiplyVec3(getBarycentricCoord(p0, p1, p2, p));
+
+      const pxlData = shader.fragmentFunc(p, t, n, b);
       if (pxlData)
         onPixelCallback(pxlData);
     }

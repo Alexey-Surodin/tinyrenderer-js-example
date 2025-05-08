@@ -7,6 +7,7 @@ import { SimpleDepthShader, SimpleShader } from "./tinyrenderer/shaders/simpleSh
 import modelFile from "./static/model.txt";
 //@ts-ignore
 import textureFile from "./static/texture.tga";
+import { GouraudShader } from "./tinyrenderer/shaders/gouraudShader";
 
 async function main(): Promise<void> {
   const model = new Model().parse(modelFile);
@@ -16,10 +17,11 @@ async function main(): Promise<void> {
 
   const shader = SimpleShader.init();
   const depthShader = SimpleDepthShader.init();
+  const gouraudShader = GouraudShader.init();
 
   render([
-    { model: model, shader: shader },
-    { model: testModel, shader: shader }
+    { model: model, shader: gouraudShader },
+    { model: testModel, shader: gouraudShader }
   ]);
 }
 
