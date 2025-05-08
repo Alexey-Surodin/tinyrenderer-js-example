@@ -252,10 +252,10 @@ export class Matrix4 {
     const r = new Vec4();
     const a = this.data;
 
-    r.x = a[0] * b.x + a[1] * b.y + a[2] * b.z + a[3];
-    r.y = a[4] * b.x + a[5] * b.y + a[6] * b.z + a[7];
-    r.z = a[8] * b.x + a[9] * b.y + a[10] * b.z + a[11];
-    r.w = a[12] * b.x + a[13] * b.y + a[14] * b.z + a[15];
+    r.x = a[0] * b.x + a[1] * b.y + a[2] * b.z + a[3] * b.w;
+    r.y = a[4] * b.x + a[5] * b.y + a[6] * b.z + a[7] * b.w;
+    r.z = a[8] * b.x + a[9] * b.y + a[10] * b.z + a[11] * b.w;
+    r.w = a[12] * b.x + a[13] * b.y + a[14] * b.z + a[15] * b.w;
 
     return r;
   }

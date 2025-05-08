@@ -71,13 +71,12 @@ export class Camera {
     return m;
   }
 
-  getViewProjMatrix(width: number, height: number, depth: number): Matrix4 {
+  getViewProjMatrix(): Matrix4 {
 
     const view = this.getViewMatrix();
     const proj = this.getProjMatrix();
-    const viewport = this.getViewPortMatrix(width, height, depth);
 
-    return viewport.multiply(proj.multiply(view));
+    return proj.multiply(view);
   }
 
 }

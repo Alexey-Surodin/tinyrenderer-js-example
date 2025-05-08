@@ -1,11 +1,11 @@
-import { Triangle, Vec3, Vec4 } from "../utils/utils";
+import { Matrix4, Triangle, Vec3, Vec4 } from "../utils/utils";
 
-export function linearInterpolation(input: Triangle, vertexFunc: (tri: Triangle) => Triangle, fragmentFunc: (pos: Vec3, tex: Vec3, norm: Vec3) => void): void {
+export function linearInterpolation(input: Triangle, viewPortMatrix: Matrix4, vertexFunc: (tri: Triangle) => Triangle, fragmentFunc: (pos: Vec3, tex: Vec3, norm: Vec3) => void): void {
 
   const tri = vertexFunc(input);
 
   const toVec3 = (v: Vec4): Vec3 => {
-    v.divideW().round();
+    v = viewPortMatrix.multiplyVec4(v).divideW().round();
     return new Vec3(v.x, v.y, v.z);
   };
 

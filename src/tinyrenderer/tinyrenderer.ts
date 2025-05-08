@@ -1,7 +1,7 @@
-import { Color, getCanvas, Triangle, Vec4 } from "../utils/utils";
+import { Color, getCanvas, Triangle } from "../utils/utils";
 import { getTestModel, Model } from "./model";
 import { Vec3 } from "../utils/utils";
-import { getTexturePixel, TgaImage, readTexture } from "../utils/tgaImage";
+import { getTexturePixel, readTexture } from "../utils/tgaImage";
 //@ts-ignore
 import modelFile from "../static/model.txt";
 //@ts-ignore
@@ -13,7 +13,7 @@ import { barycentricInterpolation } from "./barycentricInterpolation";
 const black = new Color(0, 0, 0, 255);
 
 const camera = new Camera(new Vec3(0, 0, 2), new Vec3(0, 0, 0), new Vec3(0, 1, 0));
-const light_dir = new Vec3(0, 0, -1).norm();
+const light_dir = new Vec3(0, 0.5, -1).norm();
 
 function getPixelIndex(point: Vec3, width: number, height: number): number {
   let x = Math.round(point.x);
@@ -50,28 +50,28 @@ function clearImage(imageData: ImageData, color: Color = black): void {
 
 function drawTriangle(imageData: ImageData, tri: Triangle, zBuffer?: Uint8ClampedArray): void {
 
-  const viewProjMatrix = camera.getViewProjMatrix(imageData.width, imageData.height, 255);
+  const viewProjMatrix = camera.getViewProjMatrix();
+  const viewPortMatrix = camera.getViewPortMatrix(imageData.width, imageData.height, 255)
   const view = camera.getViewMatrix();
-  const proj = camera.getProjMatrix();
-  const vpInverse = proj.multiply(view).inverse().transpose();
+  const viewInverse = view.inverse().transpose();
 
   const vertFunc = function (tri: Triangle): Triangle {
     tri.p0 = viewProjMatrix.multiplyVec4(tri.p0);
     tri.p1 = viewProjMatrix.multiplyVec4(tri.p1);
     tri.p2 = viewProjMatrix.multiplyVec4(tri.p2);
 
-    tri.n0 = vpInverse.multiplyVec3(tri.n0).norm();
-    tri.n1 = vpInverse.multiplyVec3(tri.n1).norm();
-    tri.n2 = vpInverse.multiplyVec3(tri.n2).norm();
+    tri.n0 = viewInverse.multiplyVec3(tri.n0).norm();
+    tri.n1 = viewInverse.multiplyVec3(tri.n1).norm();
+    tri.n2 = viewInverse.multiplyVec3(tri.n2).norm();
     return tri;
   }
 
   const fragFunc = function (p: Vec3, t: Vec3, n: Vec3): void {
     let color: Color;
-    const intensity = n.norm().dot(light_dir);
+    let intensity = n.norm().dot(light_dir);
 
     if (intensity < 0.001)
-      return;
+      intensity = 0;
 
     if (tri.texture) {
       color = getTexturePixel(t, tri.texture).mulScalar(intensity);
@@ -85,52 +85,26 @@ function drawTriangle(imageData: ImageData, tri: Triangle, zBuffer?: Uint8Clampe
     setPixel(imageData, p, color, zBuffer);
   }
 
-  //linearInterpolation(tri, vertFunc, fragFunc);
-  barycentricInterpolation(tri, vertFunc, fragFunc);
+  //linearInterpolation(tri, viewPortMatrix, vertFunc, fragFunc);
+  barycentricInterpolation(tri, viewPortMatrix, vertFunc, fragFunc);
 }
 
 function drawModel(imageData: ImageData, model: Model, zBuffer?: Uint8ClampedArray): void {
-  const faces = model.faces;
-  const vert = model.vert;
-  const text = model.text;
-  const norm = model.norm;
 
-  const getVector = (array: number[][], index: number) =>
-    new Vec3(array[index][0], array[index][1], array[index][2]);
-
-  const getIndex = (face: number[][], index: number) =>
-    new Vec3(face[0][index], face[1][index], face[2][index]);
-
-  for (let i = 0; i < faces.length; i++) {
-    const face = faces[i];
-    const v_ind = getIndex(face, 0);
-    const t_ind = getIndex(face, 1);
-    const n_ind = getIndex(face, 2);
-
-    let v0 = getVector(vert, v_ind.x);
-    let v1 = getVector(vert, v_ind.y);
-    let v2 = getVector(vert, v_ind.z);
-
-    let t0 = getVector(text, t_ind.x);
-    let t1 = getVector(text, t_ind.y);
-    let t2 = getVector(text, t_ind.z);
-
-    let n0 = getVector(norm, n_ind.x);
-    let n1 = getVector(norm, n_ind.y);
-    let n2 = getVector(norm, n_ind.z);
+  for (let i = 0; i < model.faces.length; i++) {
 
     let triangle: Triangle = {
-      p0: new Vec4(v0.x, v0.y, v0.z, 1),
-      p1: new Vec4(v1.x, v1.y, v1.z, 1),
-      p2: new Vec4(v2.x, v2.y, v2.z, 1),
+      p0: model.getVertex(i, 0),
+      p1: model.getVertex(i, 1),
+      p2: model.getVertex(i, 2),
 
-      t0: t0,
-      t1: t1,
-      t2: t2,
+      t0: model.getTexture(i, 0),
+      t1: model.getTexture(i, 1),
+      t2: model.getTexture(i, 2),
 
-      n0: n0,
-      n1: n1,
-      n2: n2,
+      n0: model.getNormal(i, 0),
+      n1: model.getNormal(i, 1),
+      n2: model.getNormal(i, 2),
 
       texture: model.texture,
       color: new Color().random()
@@ -166,4 +140,21 @@ export async function runTinyRenderer(): Promise<void> {
   drawModel(imageData, testModel, zBuffer);
 
   context.putImageData(imageData, 0, 0);
+
+  // const depthImageData = context.createImageData(canvasRect.width, canvasRect.height);
+  // storeZBuffer(depthImageData, zBuffer);
+  // context.putImageData(depthImageData, 0, 0);
+
+}
+
+function storeZBuffer(imageData: ImageData, zBuffer: Uint8ClampedArray) {
+  const depthImageBuffer = imageData.data;
+  zBuffer.forEach((v, i) => {
+    let ind = i * 4;
+    depthImageBuffer[ind++] = v;
+    depthImageBuffer[ind++] = v;
+    depthImageBuffer[ind++] = v;
+    depthImageBuffer[ind++] = 255;
+  });
+
 }

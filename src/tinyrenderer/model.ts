@@ -1,4 +1,5 @@
 import { generateTestTexture, TgaImage } from "../utils/tgaImage";
+import { Vec3, Vec4 } from "../utils/utils";
 
 export class Model {
   vert = Array<Array<number>>();
@@ -51,6 +52,27 @@ export class Model {
     }
 
     return this;
+  }
+
+  getVertex(faceIndex: number, vIndex: number): Vec4 {
+    const face = this.faces[faceIndex];
+    const v_ind = face[vIndex][0];
+    const v_arr = this.vert[v_ind];
+    return new Vec4(v_arr[0], v_arr[1], v_arr[2], 1);
+  }
+
+  getTexture(faceIndex: number, vIndex: number): Vec3 {
+    const face = this.faces[faceIndex];
+    const t_ind = face[vIndex][1];
+    const t_arr = this.text[t_ind];
+    return new Vec3(t_arr[0], t_arr[1], t_arr[2]);
+  }
+
+  getNormal(faceIndex: number, vIndex: number): Vec3 {
+    const face = this.faces[faceIndex];
+    const n_ind = face[vIndex][2];
+    const n_arr = this.norm[n_ind];
+    return new Vec3(n_arr[0], n_arr[1], n_arr[2]);
   }
 }
 

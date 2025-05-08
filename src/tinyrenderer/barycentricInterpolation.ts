@@ -1,43 +1,49 @@
-import { Triangle, Vec3, Vec4 } from "../utils/utils";
+import { Matrix4, Triangle, Vec3, Vec4 } from "../utils/utils";
 
-export function barycentricInterpolation(input: Triangle, vertexFunc: (tri: Triangle) => Triangle, fragmentFunc: (pos: Vec3, tex: Vec3, norm: Vec3) => void): void {
+export function barycentricInterpolation(input: Triangle, viewPortMatrix: Matrix4, vertexFunc: (tri: Triangle) => Triangle, fragmentFunc: (pos: Vec3, tex: Vec3, norm: Vec3) => void): void {
 
+  //get triangle in clip space
   const tri = vertexFunc(input);
 
-  const p0 = tri.p0;
-  const p1 = tri.p1;
-  const p2 = tri.p2;
+  const iz0 = 1 / tri.p0.w;
+  const iz1 = 1 / tri.p1.w;
+  const iz2 = 1 / tri.p2.w;
 
-  const iz0 = 1 / p0.w;
-  const iz1 = 1 / p1.w;
-  const iz2 = 1 / p2.w;
+  //get triangle points in screen space
+  const p0 = viewPortMatrix.multiplyVec4(tri.p0).divideW(); 
+  const p1 = viewPortMatrix.multiplyVec4(tri.p1).divideW();
+  const p2 = viewPortMatrix.multiplyVec4(tri.p2).divideW();
 
-  p0.mulScalar(iz0);
-  p1.mulScalar(iz1);
-  p2.mulScalar(iz2);
+  const w = 2 * viewPortMatrix.data[0];
+  const h = 2 * viewPortMatrix.data[5]
 
-  const xmin = Math.round(Math.min(p0.x, p1.x, p2.x));
-  const xmax = Math.round(Math.max(p0.x, p1.x, p2.x));
-  const ymin = Math.round(Math.min(p0.y, p1.y, p2.y));
-  const ymax = Math.round(Math.max(p0.y, p1.y, p2.y));
+  //clip in screen space
+  const xmin = Math.round(Math.min(w, Math.min(p0.x, p1.x, p2.x)));
+  const xmax = Math.round(Math.max(0, Math.max(p0.x, p1.x, p2.x)));
+  const ymin = Math.round(Math.min(h, Math.min(p0.y, p1.y, p2.y)));
+  const ymax = Math.round(Math.max(0, Math.max(p0.y, p1.y, p2.y)));
 
   const v = new Vec3();
   for (let y = ymin; y <= ymax; y++) {
     for (let x = xmin; x <= xmax; x++) {
       v.x = x;
       v.y = y;
-      const b = getBarycentricCoord(p0, p1, p2, v);
+      const b = getBarycentricCoord(p0, p1, p2, v); // screen space barycentric
 
       if (b.x < 0 || b.y < 0 || b.z < 0)
         continue;
 
-      v.z = (p0.z * b.x + p1.z * b.y + p2.z * b.z);
+      //v.z = (p0.z * b.x + p1.z * b.y + p2.z * b.z); // screen space z linear interpolation
 
+      // clip space barycentric
       const b0 = b.x * iz0;
       const b1 = b.y * iz1;
       const b2 = b.z * iz2;
 
       const z = 1 / (b.x * iz0 + b.y * iz1 + b.z * iz2);
+
+      v.z = (b0 * tri.p0.z + b1 * tri.p1.z + b2 * tri.p2.z) * z;  // clip space z barycentric interpolation
+      v.z = v.z * viewPortMatrix.data[10] + viewPortMatrix.data[11];  // z in screen space
 
       const izt = tri.t0.clone().mulScalar(b0).add(tri.t1.clone().mulScalar(b1)).add(tri.t2.clone().mulScalar(b2));
       izt.mulScalar(z);
