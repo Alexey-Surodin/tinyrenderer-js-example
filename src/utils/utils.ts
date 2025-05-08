@@ -1,5 +1,3 @@
-import { TgaImage } from "./tgaImage";
-
 export type Triangle = {
   p0: Vec4;
   p1: Vec4;
@@ -12,9 +10,6 @@ export type Triangle = {
   n0: Vec3;
   n1: Vec3;
   n2: Vec3;
-
-  texture?: TgaImage,
-  color?: Color,
 }
 
 export async function getCanvas(): Promise<HTMLCanvasElement> {

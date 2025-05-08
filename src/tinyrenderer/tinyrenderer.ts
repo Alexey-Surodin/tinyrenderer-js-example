@@ -1,19 +1,16 @@
 import { Color, getCanvas, Triangle } from "../utils/utils";
-import { getTestModel, Model } from "./model";
+import { Model } from "./model";
 import { Vec3 } from "../utils/utils";
-import { getTexturePixel, readTexture } from "../utils/tgaImage";
-//@ts-ignore
-import modelFile from "../static/model.txt";
-//@ts-ignore
-import textureFile from "../static/texture.tga";
 import { Camera } from "./camera";
 import { linearInterpolation } from "./linearInterpolation";
 import { barycentricInterpolation } from "./barycentricInterpolation";
+import { ShaderBase } from "./shaders/shaderBase";
 
-const black = new Color(0, 0, 0, 255);
-
+const clearColor = new Color(0, 0, 0, 255);
 const camera = new Camera(new Vec3(0, 0, 2), new Vec3(0, 0, 0), new Vec3(0, 1, 0));
 const light_dir = new Vec3(0, 0.5, -1).norm();
+const useBarycentricInterpolation = true;
+const useZBuffer = true;
 
 function getPixelIndex(point: Vec3, width: number, height: number): number {
   let x = Math.round(point.x);
@@ -41,58 +38,30 @@ function setPixel(imageData: ImageData, point: Vec3, color: Color, zBuffer?: Uin
   imageData.data[index] = Math.round(color.a);
 }
 
-function clearImage(imageData: ImageData, color: Color = black): void {
+function clearImage(imageData: ImageData, color: Color = clearColor): void {
   const buffer = imageData.data.buffer;
   const array = new Uint32Array(buffer);
   const hexColor = color.a << 24 | color.b << 16 | color.g << 8 | color.r;
   array.fill(hexColor);
 }
 
-function drawTriangle(imageData: ImageData, tri: Triangle, zBuffer?: Uint8ClampedArray): void {
-
-  const viewProjMatrix = camera.getViewProjMatrix();
-  const viewPortMatrix = camera.getViewPortMatrix(imageData.width, imageData.height, 255)
-  const view = camera.getViewMatrix();
-  const viewInverse = view.inverse().transpose();
-
-  const vertFunc = function (tri: Triangle): Triangle {
-    tri.p0 = viewProjMatrix.multiplyVec4(tri.p0);
-    tri.p1 = viewProjMatrix.multiplyVec4(tri.p1);
-    tri.p2 = viewProjMatrix.multiplyVec4(tri.p2);
-
-    tri.n0 = viewInverse.multiplyVec3(tri.n0).norm();
-    tri.n1 = viewInverse.multiplyVec3(tri.n1).norm();
-    tri.n2 = viewInverse.multiplyVec3(tri.n2).norm();
-    return tri;
-  }
-
-  const fragFunc = function (p: Vec3, t: Vec3, n: Vec3): void {
-    let color: Color;
-    let intensity = n.norm().dot(light_dir);
-
-    if (intensity < 0.001)
-      intensity = 0;
-
-    if (tri.texture) {
-      color = getTexturePixel(t, tri.texture).mulScalar(intensity);
-    }
-    else if (tri.color) {
-      color = tri.color.mulScalar(intensity);
-    }
-    else {
-      color = new Color(intensity, intensity, intensity, 255).mulScalar(255);
-    }
-    setPixel(imageData, p, color, zBuffer);
-  }
-
-  //linearInterpolation(tri, viewPortMatrix, vertFunc, fragFunc);
-  barycentricInterpolation(tri, viewPortMatrix, vertFunc, fragFunc);
+function drawTriangle(imageData: ImageData, tri: Triangle, shader: ShaderBase, zBuffer?: Uint8ClampedArray): void {
+  if (useBarycentricInterpolation)
+    barycentricInterpolation(tri, shader, (pxlData: { pxl: Vec3, color: Color }) => setPixel(imageData, pxlData.pxl, pxlData.color, zBuffer));
+  else
+    linearInterpolation(tri, shader, (pxlData: { pxl: Vec3, color: Color }) => setPixel(imageData, pxlData.pxl, pxlData.color, zBuffer));
 }
 
-function drawModel(imageData: ImageData, model: Model, zBuffer?: Uint8ClampedArray): void {
+function drawModel(imageData: ImageData, model: Model, shader: ShaderBase, zBuffer?: Uint8ClampedArray): void {
+
+  // update unifrom
+  shader.uniform.viewProjMatrix = camera.getViewProjMatrix();
+  shader.uniform.viewInverse = camera.getViewMatrix().inverse().transpose();
+  shader.uniform.viewPortMatrix = camera.getViewPortMatrix(imageData.width, imageData.height, 255);
+  shader.uniform.light_dir = light_dir.clone();
+  shader.uniform['texture'] = model.texture;
 
   for (let i = 0; i < model.faces.length; i++) {
-
     let triangle: Triangle = {
       p0: model.getVertex(i, 0),
       p1: model.getVertex(i, 1),
@@ -105,19 +74,15 @@ function drawModel(imageData: ImageData, model: Model, zBuffer?: Uint8ClampedArr
       n0: model.getNormal(i, 0),
       n1: model.getNormal(i, 1),
       n2: model.getNormal(i, 2),
-
-      texture: model.texture,
-      color: new Color().random()
     }
 
-    drawTriangle(imageData, triangle, zBuffer);
+    drawTriangle(imageData, triangle, shader, zBuffer);
   }
 }
 
-export async function runTinyRenderer(): Promise<void> {
+export async function render(modelList: Array<{ model: Model, shader: ShaderBase }>): Promise<void> {
 
   const canvas = await getCanvas();
-
   const context = canvas?.getContext("2d");
 
   if (!context)
@@ -126,35 +91,18 @@ export async function runTinyRenderer(): Promise<void> {
   const canvasRect = canvas.getBoundingClientRect();
 
   const imageData = context.createImageData(canvasRect.width, canvasRect.height);
-  const zBuffer = new Uint8ClampedArray(imageData.height * imageData.width);
-  zBuffer.fill(255);
+  let zBuffer: Uint8ClampedArray | undefined;
 
-  clearImage(imageData, black);
+  if (useZBuffer) {
+    zBuffer = new Uint8ClampedArray(imageData.height * imageData.width);
+    zBuffer.fill(255);
+  }
 
-  const model = new Model().parse(modelFile);
-  model.texture = await readTexture(textureFile);
+  clearImage(imageData, clearColor);
 
-  const testModel = getTestModel();
-
-  drawModel(imageData, model, zBuffer);
-  drawModel(imageData, testModel, zBuffer);
+  for (const { model, shader } of modelList) {
+    drawModel(imageData, model, shader, zBuffer);
+  }
 
   context.putImageData(imageData, 0, 0);
-
-  // const depthImageData = context.createImageData(canvasRect.width, canvasRect.height);
-  // storeZBuffer(depthImageData, zBuffer);
-  // context.putImageData(depthImageData, 0, 0);
-
-}
-
-function storeZBuffer(imageData: ImageData, zBuffer: Uint8ClampedArray) {
-  const depthImageBuffer = imageData.data;
-  zBuffer.forEach((v, i) => {
-    let ind = i * 4;
-    depthImageBuffer[ind++] = v;
-    depthImageBuffer[ind++] = v;
-    depthImageBuffer[ind++] = v;
-    depthImageBuffer[ind++] = 255;
-  });
-
 }

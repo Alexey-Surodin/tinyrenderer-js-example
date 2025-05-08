@@ -1,8 +1,9 @@
-import { Matrix4, Triangle, Vec3, Vec4 } from "../utils/utils";
+import { Color, Triangle, Vec3, Vec4 } from "../utils/utils";
+import { ShaderBase } from "./shaders/shaderBase";
 
-export function linearInterpolation(input: Triangle, viewPortMatrix: Matrix4, vertexFunc: (tri: Triangle) => Triangle, fragmentFunc: (pos: Vec3, tex: Vec3, norm: Vec3) => void): void {
-
-  const tri = vertexFunc(input);
+export function linearInterpolation(input: Triangle, shader: ShaderBase, onPixelCallback: (pxlData: { pxl: Vec3, color: Color }) => void): void {
+  const viewPortMatrix = shader.uniform.viewPortMatrix;
+  const tri = shader.vertexFunc(input);
 
   const toVec3 = (v: Vec4): Vec3 => {
     v = viewPortMatrix.multiplyVec4(v).divideW().round();
@@ -64,7 +65,9 @@ export function linearInterpolation(input: Triangle, viewPortMatrix: Matrix4, ve
       let t = tr.clone().sub(tl).mulScalar(k).add(tl);
       let n = nr.clone().sub(nl).mulScalar(k).add(nl);
 
-      fragmentFunc(p, t, n);
+      const pxlData = shader.fragmentFunc(p, t, n);
+      if (pxlData)
+        onPixelCallback(pxlData);
     }
   }
 }

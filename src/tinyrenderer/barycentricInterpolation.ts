@@ -1,16 +1,18 @@
-import { Matrix4, Triangle, Vec3, Vec4 } from "../utils/utils";
+import { Color, Triangle, Vec3, Vec4 } from "../utils/utils";
+import { ShaderBase } from "./shaders/shaderBase";
 
-export function barycentricInterpolation(input: Triangle, viewPortMatrix: Matrix4, vertexFunc: (tri: Triangle) => Triangle, fragmentFunc: (pos: Vec3, tex: Vec3, norm: Vec3) => void): void {
+export function barycentricInterpolation(input: Triangle, shader: ShaderBase, onPixelCallback: (pxlData: { pxl: Vec3, color: Color }) => void): void {
+
+  const viewPortMatrix = shader.uniform.viewPortMatrix;
 
   //get triangle in clip space
-  const tri = vertexFunc(input);
-
+  const tri = shader.vertexFunc(input);
   const iz0 = 1 / tri.p0.w;
   const iz1 = 1 / tri.p1.w;
   const iz2 = 1 / tri.p2.w;
 
   //get triangle points in screen space
-  const p0 = viewPortMatrix.multiplyVec4(tri.p0).divideW(); 
+  const p0 = viewPortMatrix.multiplyVec4(tri.p0).divideW();
   const p1 = viewPortMatrix.multiplyVec4(tri.p1).divideW();
   const p2 = viewPortMatrix.multiplyVec4(tri.p2).divideW();
 
@@ -51,7 +53,9 @@ export function barycentricInterpolation(input: Triangle, viewPortMatrix: Matrix
       const izn = tri.n0.clone().mulScalar(b0).add(tri.n1.clone().mulScalar(b1)).add(tri.n2.clone().mulScalar(b2));
       izn.mulScalar(z);
 
-      fragmentFunc(v, izt, izn);
+      const pxlData = shader.fragmentFunc(v, izt, izn);
+      if (pxlData)
+        onPixelCallback(pxlData);
     }
   }
 }
