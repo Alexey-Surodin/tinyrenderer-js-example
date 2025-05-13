@@ -25,13 +25,10 @@ export class GouraudShader extends Shader<UniformBase> {
 
   fragmentFunc(p: Vec3, t: Vec3, n: Vec3, b: Vec3): { pxl: Vec3; color: Color; } | null {
     let color: Color;
-    let intensity = this.faceLightning.dot(b);
+    let intensity = Math.max(this.faceLightning.dot(b), 0);
 
-    if (intensity < 0.001)
-      intensity = 0;
-
-    if (this.uniform.texture) {
-      color = getTexturePixel(t, this.uniform.texture).mulScalar(intensity);
+    if (this.uniform.diffuseMap) {
+      color = getTexturePixel(t, this.uniform.diffuseMap).mulScalar(intensity);
     }
     else if (this.uniform.color) {
       color = this.uniform.color.mulScalar(intensity);

@@ -1,20 +1,22 @@
-import { getTexturePixel, TgaImage } from "../../utils/tgaImage";
+import { getTexturePixel, getTexturePixelAsVec3, TgaImage } from "../../utils/tgaImage";
 import { Color, Matrix4, Triangle, Vec3 } from "../../utils/utils";
 import { Shader, UniformBase } from "./shaderBase";
 
-export type SimpleShaderUniform = UniformBase & {
-  texture?: TgaImage,
+export type LambertShaderUniform = UniformBase & {
+  factor?: number,
+  diffuseMap?: TgaImage,
   color?: Color
 };
 
-export class SimpleShader extends Shader<SimpleShaderUniform> {
+export class LambertShader extends Shader<LambertShaderUniform> {
 
-  static init(): SimpleShader {
-    return new SimpleShader({
+  static init(factor: number = 0): LambertShader {
+    return new LambertShader({
       light_dir: new Vec3(),
       viewInverse: new Matrix4(),
       viewPortMatrix: new Matrix4(),
-      viewProjMatrix: new Matrix4()
+      viewProjMatrix: new Matrix4(),
+      factor: Math.max(Math.min(factor, 1), 0),
     });
   }
 
@@ -33,13 +35,18 @@ export class SimpleShader extends Shader<SimpleShaderUniform> {
 
   fragmentFunc(p: Vec3, t: Vec3, n: Vec3): { pxl: Vec3, color: Color } | null {
     let color: Color;
-    let intensity = n.norm().dot(this.uniform.light_dir);
+    let normal: Vec3 = n;
 
-    if (intensity < 0.001)
-      intensity = 0;
+    if (this.uniform.normalMap) {
+      normal = getTexturePixelAsVec3(t, this.uniform.normalMap);
+      normal = this.uniform.viewInverse.multiplyVec3(normal);
+    }
 
-    if (this.uniform.texture) {
-      color = getTexturePixel(t, this.uniform.texture).mulScalar(intensity);
+    let factor = this.uniform.factor ?? 0;
+    let intensity = Math.max((normal.norm().dot(this.uniform.light_dir) + factor), 0) / (1 + factor);
+
+    if (this.uniform.diffuseMap) {
+      color = getTexturePixel(t, this.uniform.diffuseMap).mulScalar(intensity);
     }
     else if (this.uniform.color) {
       color = this.uniform.color.mulScalar(intensity);
@@ -49,21 +56,5 @@ export class SimpleShader extends Shader<SimpleShaderUniform> {
     }
 
     return { pxl: p, color: color };
-  }
-}
-
-export class SimpleDepthShader extends SimpleShader {
-
-  override fragmentFunc(p: Vec3): { pxl: Vec3; color: Color; } {
-    return { pxl: p, color: new Color(p.z, p.z, p.z, 255) };
-  }
-
-  static init(): SimpleDepthShader {
-    return new SimpleDepthShader({
-      light_dir: new Vec3(),
-      viewInverse: new Matrix4(),
-      viewPortMatrix: new Matrix4(),
-      viewProjMatrix: new Matrix4()
-    });
   }
 }

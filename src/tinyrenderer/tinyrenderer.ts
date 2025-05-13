@@ -59,7 +59,8 @@ function drawModel(imageData: ImageData, model: Model, shader: ShaderBase, zBuff
   shader.uniform.viewInverse = camera.getViewMatrix().inverse().transpose();
   shader.uniform.viewPortMatrix = camera.getViewPortMatrix(imageData.width, imageData.height, 255);
   shader.uniform.light_dir = light_dir.clone();
-  shader.uniform['texture'] = model.texture;
+  shader.uniform['diffuseMap'] = model.diffuseTexture;
+  shader.uniform['normalMap'] = model.normalTexture;
 
   for (let i = 0; i < model.faces.length; i++) {
     let triangle: Triangle = {

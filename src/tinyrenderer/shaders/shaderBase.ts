@@ -17,3 +17,27 @@ export abstract class Shader<T extends UniformBase> {
 }
 
 export type ShaderBase = Shader<UniformBase>;
+
+
+export class DepthShader extends Shader<UniformBase> {
+  override vertexFunc(tri: Triangle): Triangle {
+    const viewProjMatrix = this.uniform.viewProjMatrix;
+    tri.p0 = viewProjMatrix.multiplyVec4(tri.p0);
+    tri.p1 = viewProjMatrix.multiplyVec4(tri.p1);
+    tri.p2 = viewProjMatrix.multiplyVec4(tri.p2);
+    return tri;
+  }
+
+  override fragmentFunc(p: Vec3): { pxl: Vec3; color: Color; } {
+    return { pxl: p, color: new Color(p.z, p.z, p.z, 255) };
+  }
+
+  static init(): DepthShader {
+    return new DepthShader({
+      light_dir: new Vec3(),
+      viewInverse: new Matrix4(),
+      viewPortMatrix: new Matrix4(),
+      viewProjMatrix: new Matrix4()
+    });
+  }
+}

@@ -152,10 +152,15 @@ export function getTexturePixel(point: Vec3, texture: TgaImage): Color {
     color.b = imageData[index++];
     color.g = imageData[index++];
     color.r = imageData[index++];
-    color.a = 255; //imageData[index];
+    color.a = bpp == 4 ? imageData[index] : 255;
   }
 
   return color;
+}
+
+export function getTexturePixelAsVec3(point: Vec3, texture: TgaImage): Vec3{
+  const color = getTexturePixel(point, texture);
+  return new Vec3(color.b, color.g, color.r);
 }
 
 export async function readTexture(path: string | URL): Promise<TgaImage> {

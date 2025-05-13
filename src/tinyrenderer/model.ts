@@ -7,7 +7,8 @@ export class Model {
   norm = Array<Array<number>>();
   faces = Array<Array<Array<number>>>();
 
-  texture?: TgaImage;
+  diffuseTexture?: TgaImage;
+  normalTexture?: TgaImage;
 
   parse(text: string): this {
 
@@ -82,6 +83,6 @@ export function getTestModel(): Model {
   model.text = [[0, 0, 0], [0.9, 0, 0], [0.9, 0.9, 0], [0, 0.9, 0]];
   model.norm = [[0, 1, 0]];
   model.faces = [[[0, 0, 0], [1, 1, 0], [2, 2, 0]], [[0, 0, 0], [2, 2, 0], [3, 3, 0]]];
-  model.texture = generateTestTexture(200, 200, 20);
+  model.diffuseTexture = generateTestTexture(200, 200, 20);
   return model;
 }

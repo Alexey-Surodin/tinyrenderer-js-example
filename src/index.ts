@@ -1,27 +1,35 @@
 import { getTestModel, Model } from "./tinyrenderer/model";
 import { render } from "./tinyrenderer/tinyrenderer";
 import { readTexture } from "./utils/tgaImage";
-import { SimpleDepthShader, SimpleShader } from "./tinyrenderer/shaders/simpleShader";
-
-//@ts-ignore
-import modelFile from "./static/model.txt";
-//@ts-ignore
-import textureFile from "./static/texture.tga";
+import { AfricanHeadModel } from "./obj/african_head/african_head";
+import { LambertShader } from "./tinyrenderer/shaders/lambertShader";
 import { GouraudShader } from "./tinyrenderer/shaders/gouraudShader";
+import { DepthShader } from "./tinyrenderer/shaders/shaderBase";
 
 async function main(): Promise<void> {
-  const model = new Model().parse(modelFile);
-  model.texture = await readTexture(textureFile);
+  const head = new Model().parse(AfricanHeadModel.head);
+  head.diffuseTexture = await readTexture(AfricanHeadModel.headDiffuse);
+  head.normalTexture = await readTexture(AfricanHeadModel.headNormal);
+
+  const innerEye = new Model().parse(AfricanHeadModel.innerEye);
+  innerEye.diffuseTexture = await readTexture(AfricanHeadModel.innerEyeDiffuse);
+  innerEye.normalTexture = await readTexture(AfricanHeadModel.innerEyeNormal);
+
+  const outerEye = new Model().parse(AfricanHeadModel.outerEye);
+  outerEye.diffuseTexture = await readTexture(AfricanHeadModel.outerEyeDiffuse);
+  outerEye.normalTexture = await readTexture(AfricanHeadModel.outerEyeNormal);
 
   const testModel = getTestModel();
 
-  const shader = SimpleShader.init();
-  const depthShader = SimpleDepthShader.init();
+  const lambertShader = LambertShader.init(0.1);
+  const depthShader = DepthShader.init();
   const gouraudShader = GouraudShader.init();
 
   render([
-    { model: model, shader: gouraudShader },
-    { model: testModel, shader: gouraudShader }
+    { model: head, shader: lambertShader },
+    { model: innerEye, shader: lambertShader },
+    //{ model: outerEye, shader: shader },
+    { model: testModel, shader: lambertShader }
   ]);
 }
 
