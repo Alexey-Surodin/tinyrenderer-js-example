@@ -12,7 +12,7 @@ export class LambertShader extends Shader<LambertShaderUniform> {
 
   static init(factor: number = 0): LambertShader {
     return new LambertShader({
-      light_dir: new Vec3(),
+      lights: [],
       viewInverse: new Matrix4(),
       viewPortMatrix: new Matrix4(),
       viewProjMatrix: new Matrix4(),
@@ -34,7 +34,10 @@ export class LambertShader extends Shader<LambertShaderUniform> {
   }
 
   fragmentFunc(p: Vec3, t: Vec3, n: Vec3): { pxl: Vec3, color: Color } | null {
-    let color: Color;
+    const factor = this.uniform.factor ?? 0;
+    const lights = this.uniform.lights;
+    let lightSumColor: Color = new Color(0, 0, 0, 255);
+    let surfaceColor: Color = new Color(255, 255, 255, 255);
     let normal: Vec3 = n;
 
     if (this.uniform.normalMap) {
@@ -42,19 +45,18 @@ export class LambertShader extends Shader<LambertShaderUniform> {
       normal = this.uniform.viewInverse.multiplyVec3(normal);
     }
 
-    let factor = this.uniform.factor ?? 0;
-    let intensity = Math.max((normal.norm().dot(this.uniform.light_dir) + factor), 0) / (1 + factor);
+    for (const light of lights) {
+      let intensity = Math.max((normal.norm().dot(light.direction) + factor), 0) / (1 + factor);
+      lightSumColor.addColor(light.color.clone().mulScalar(intensity));
+    }
 
     if (this.uniform.diffuseMap) {
-      color = getTexturePixel(t, this.uniform.diffuseMap).mulScalar(intensity);
+      surfaceColor = getTexturePixel(t, this.uniform.diffuseMap);
     }
     else if (this.uniform.color) {
-      color = this.uniform.color.mulScalar(intensity);
-    }
-    else {
-      color = new Color(intensity, intensity, intensity, 255).mulScalar(255);
+      surfaceColor = this.uniform.color;
     }
 
-    return { pxl: p, color: color };
+    return { pxl: p, color: surfaceColor.mul(lightSumColor) };
   }
 }

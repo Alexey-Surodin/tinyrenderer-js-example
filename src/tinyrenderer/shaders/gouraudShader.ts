@@ -4,7 +4,7 @@ import { Shader, UniformBase } from "./shaderBase";
 
 export class GouraudShader extends Shader<UniformBase> {
 
-  faceLightning: Vec3 = new Vec3();
+  faceLightning: Vec3[] = [];
 
   vertexFunc(tri: Triangle): Triangle {
     const viewProjMatrix = this.uniform.viewProjMatrix;
@@ -17,32 +17,42 @@ export class GouraudShader extends Shader<UniformBase> {
     tri.n1 = viewInverse.multiplyVec3(tri.n1).norm();
     tri.n2 = viewInverse.multiplyVec3(tri.n2).norm();
 
-    this.faceLightning.x = Math.max(0, tri.n0.dot(this.uniform.light_dir));
-    this.faceLightning.y = Math.max(0, tri.n1.dot(this.uniform.light_dir));
-    this.faceLightning.z = Math.max(0, tri.n2.dot(this.uniform.light_dir));
+    const lights = this.uniform.lights;
+    this.faceLightning = [];
+    for (let i = 0; i < lights.length; i++) {
+      const v = new Vec3();
+      v.x = Math.max(0, tri.n0.dot(lights[i].direction));
+      v.y = Math.max(0, tri.n1.dot(lights[i].direction));
+      v.z = Math.max(0, tri.n2.dot(lights[i].direction));
+      this.faceLightning.push(v);
+    }
+
     return tri;
   }
 
   fragmentFunc(p: Vec3, t: Vec3, n: Vec3, b: Vec3): { pxl: Vec3; color: Color; } | null {
-    let color: Color;
-    let intensity = Math.max(this.faceLightning.dot(b), 0);
+    const lights = this.uniform.lights;
+    let lightSumColor: Color = new Color(0, 0, 0, 255);
+    let surfaceColor: Color = new Color(255, 255, 255, 255);
+
+    for (let i = 0; i < lights.length; i++) {
+      let intensity = Math.max(this.faceLightning[i].dot(b), 0);
+      lightSumColor.addColor(lights[i].color.clone().mulScalar(intensity));
+    }
 
     if (this.uniform.diffuseMap) {
-      color = getTexturePixel(t, this.uniform.diffuseMap).mulScalar(intensity);
+      surfaceColor = getTexturePixel(t, this.uniform.diffuseMap);
     }
     else if (this.uniform.color) {
-      color = this.uniform.color.mulScalar(intensity);
-    }
-    else {
-      color = new Color(intensity, intensity, intensity, 255).mulScalar(255);
+      surfaceColor = this.uniform.color;
     }
 
-    return { pxl: p, color: color };
+    return { pxl: p, color: surfaceColor.mul(lightSumColor) };
   }
 
   static init(): GouraudShader {
     return new GouraudShader({
-      light_dir: new Vec3(),
+      lights: [],
       viewInverse: new Matrix4(),
       viewPortMatrix: new Matrix4(),
       viewProjMatrix: new Matrix4()

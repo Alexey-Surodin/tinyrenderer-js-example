@@ -4,13 +4,17 @@ import { Vec3 } from "../utils/utils";
 import { Camera } from "./camera";
 import { linearInterpolation } from "./linearInterpolation";
 import { barycentricInterpolation } from "./barycentricInterpolation";
-import { ShaderBase } from "./shaders/shaderBase";
+import { DepthShader, ShaderBase } from "./shaders/shaderBase";
+import { Light } from "./light";
 
 const clearColor = new Color(0, 0, 0, 255);
 const camera = new Camera(new Vec3(0, 0, 2), new Vec3(0, 0, 0), new Vec3(0, 1, 0));
-const light_dir = new Vec3(0, 0.5, -1).norm();
 const useBarycentricInterpolation = true;
 const useZBuffer = true;
+
+const DirectionalLightRed = new Light(new Vec3(), new Vec3(0, 0, -1), new Color(255, 0, 0, 255));
+const DirectionalLightGreen = new Light(new Vec3(), new Vec3(-1, 0, 0), new Color(0, 255, 0, 255));
+const DirectionalLightBlue = new Light(new Vec3(), new Vec3(1, 0, 0), new Color(0, 0, 255, 255));
 
 function getPixelIndex(point: Vec3, width: number, height: number): number {
   let x = Math.round(point.x);
@@ -52,13 +56,13 @@ function drawTriangle(imageData: ImageData, tri: Triangle, shader: ShaderBase, z
     linearInterpolation(tri, shader, (pxlData: { pxl: Vec3, color: Color }) => setPixel(imageData, pxlData.pxl, pxlData.color, zBuffer));
 }
 
-function drawModel(imageData: ImageData, model: Model, shader: ShaderBase, zBuffer?: Uint8ClampedArray): void {
+function drawModel(imageData: ImageData, model: Model, camera: Camera, lights:Light[], shader: ShaderBase, zBuffer?: Uint8ClampedArray): void {
 
   // update unifrom
   shader.uniform.viewProjMatrix = camera.getViewProjMatrix();
   shader.uniform.viewInverse = camera.getViewMatrix().inverse().transpose();
   shader.uniform.viewPortMatrix = camera.getViewPortMatrix(imageData.width, imageData.height, 255);
-  shader.uniform.light_dir = light_dir.clone();
+  shader.uniform.lights = lights;
   shader.uniform['diffuseMap'] = model.diffuseTexture;
   shader.uniform['normalMap'] = model.normalTexture;
 
@@ -101,8 +105,10 @@ export async function render(modelList: Array<{ model: Model, shader: ShaderBase
 
   clearImage(imageData, clearColor);
 
+  const lights = [DirectionalLightRed, DirectionalLightGreen, DirectionalLightBlue];
+
   for (const { model, shader } of modelList) {
-    drawModel(imageData, model, shader, zBuffer);
+    drawModel(imageData, model, camera, lights, shader, zBuffer);
   }
 
   context.putImageData(imageData, 0, 0);

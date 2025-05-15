@@ -3,10 +3,7 @@ import { Vec3 } from "../utils/utils";
 
 export class Camera {
 
-  zFar = 10;
-  zNear = 1;
-
-  constructor(readonly position: Vec3, readonly eye: Vec3, readonly up: Vec3) {
+  constructor(readonly position: Vec3, readonly eye: Vec3, readonly up: Vec3, readonly zFar: number = 3, readonly zNear = 1) {
   }
 
   getViewMatrix(): Matrix4 {

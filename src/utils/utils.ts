@@ -51,6 +51,17 @@ export class Color {
     this.b *= n;
     return this;
   }
+
+  addColor(color: Color): this {
+    this.r = Math.min((color.r + this.r), 255);
+    this.g = Math.min((color.g + this.g), 255);
+    this.b = Math.min((color.b + this.b), 255);
+    return this;
+  }
+
+  clone(): Color {
+    return new Color(this.r, this.g, this.b, this.a);
+  }
 }
 
 export class Vec2 {
@@ -119,7 +130,8 @@ export class Vec3 {
   }
 
   norm(): this {
-    return this.mulScalar(1 / this.length());
+    const l = this.length();
+    return this.mulScalar(l == 0 ? 0 : 1 / l);
   }
 
   round(): this {
@@ -186,7 +198,8 @@ export class Vec4 {
   }
 
   norm(): this {
-    return this.mulScalar(1 / this.length());
+    const l = this.length();
+    return this.mulScalar(l == 0 ? 0 : 1 / l);
   }
 
   divideW(): this {
