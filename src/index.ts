@@ -25,12 +25,14 @@ async function main(): Promise<void> {
   const depthShader = DepthShader.init();
   const gouraudShader = GouraudShader.init();
 
-  render([
+  const modelList = [
     { model: head, shader: lambertShader },
     { model: innerEye, shader: lambertShader },
     //{ model: outerEye, shader: shader },
     { model: testModel, shader: lambertShader }
-  ]);
+  ];
+
+  render(modelList);
 }
 
 main();

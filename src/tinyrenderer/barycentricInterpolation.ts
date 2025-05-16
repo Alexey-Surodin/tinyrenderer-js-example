@@ -35,17 +35,14 @@ export function barycentricInterpolation(input: Triangle, shader: ShaderBase, on
       if (b.x < 0 || b.y < 0 || b.z < 0)
         continue;
 
-      //v.z = (p0.z * b.x + p1.z * b.y + p2.z * b.z); // screen space z linear interpolation
+      v.z = (p0.z * b.x + p1.z * b.y + p2.z * b.z);
 
       // clip space barycentric
       const b0 = b.x * iz0;
       const b1 = b.y * iz1;
       const b2 = b.z * iz2;
 
-      const z = 1 / (b.x * iz0 + b.y * iz1 + b.z * iz2);
-
-      v.z = (b0 * tri.p0.z + b1 * tri.p1.z + b2 * tri.p2.z) * z;  // clip space z barycentric interpolation
-      v.z = v.z * viewPortMatrix.data[10] + viewPortMatrix.data[11];  // z in screen space
+      const z = 1 / (b0 + b1 + b2);
 
       const izt = tri.t0.clone().mulScalar(b0).add(tri.t1.clone().mulScalar(b1)).add(tri.t2.clone().mulScalar(b2));
       izt.mulScalar(z);

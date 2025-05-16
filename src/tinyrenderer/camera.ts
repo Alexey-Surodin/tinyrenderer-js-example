@@ -1,13 +1,13 @@
 import { Matrix4 } from "../utils/utils";
 import { Vec3 } from "../utils/utils";
 
-export class Camera {
+export abstract class Camera {
 
-  constructor(readonly position: Vec3, readonly eye: Vec3, readonly up: Vec3, readonly zFar: number = 3, readonly zNear = 1) {
+  constructor(readonly position: Vec3, readonly eye: Vec3, readonly up: Vec3) {
+
   }
 
   getViewMatrix(): Matrix4 {
-
     const z = this.eye.clone().sub(this.position).norm();
     const x = this.up.cross(z).norm();
     const y = z.cross(x).norm();
@@ -56,6 +56,20 @@ export class Camera {
     return m;
   }
 
+  getViewProjMatrix(): Matrix4 {
+    const view = this.getViewMatrix();
+    const proj = this.getProjMatrix();
+    return proj.multiply(view);
+  }
+
+  abstract getProjMatrix(): Matrix4;
+}
+
+export class PerspectiveCamera extends Camera {
+  constructor(position: Vec3, eye: Vec3, up: Vec3, readonly zFar: number = 100, readonly zNear = 1) {
+    super(position, eye, up);
+  }
+
   getProjMatrix(): Matrix4 {
     const m = new Matrix4().identity();
 
@@ -67,14 +81,39 @@ export class Camera {
 
     return m;
   }
+}
 
-  getViewProjMatrix(): Matrix4 {
+export class OrthographicCamera extends Camera {
+  zFar = 3;
+  zNear = 1;
 
-    const view = this.getViewMatrix();
-    const proj = this.getProjMatrix();
+  left = -0.5;
+  right = -0.5;
+  top = 0.5;
+  bottom = -0.5;
 
-    return proj.multiply(view);
+  constructor(position: Vec3, eye: Vec3, up: Vec3, width: number = 1, height: number = 1) {
+    super(position, eye, up);
+    this.right = width / 2;
+    this.left = -this.right;
+
+    this.top = height / 2;
+    this.bottom = -this.top;
   }
 
+  getProjMatrix(): Matrix4 {
+    const m = new Matrix4().identity();
+
+    m.data[0] = 2 / (this.right - this.left);
+    m.data[5] = 2 / (this.top - this.bottom);
+
+    m.data[10] = 2 / (this.zFar - this.zNear);
+    m.data[11] = -(this.zFar + this.zNear) / (this.zFar - this.zNear);
+
+    m.data[14] = 0;
+    m.data[15] = 1;
+
+    return m;
+  }
 }
 

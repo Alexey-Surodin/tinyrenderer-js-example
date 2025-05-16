@@ -12,8 +12,8 @@ export type Triangle = {
   n2: Vec3;
 }
 
-export async function getCanvas(): Promise<HTMLCanvasElement> {
-  const canvas = document.querySelector("canvas");
+export async function getCanvas(id?: string): Promise<HTMLCanvasElement> {
+  const canvas = id ? document.getElementById(id) as HTMLCanvasElement : document.querySelector("canvas");
   if (!canvas) {
     throw new Error("Failed to get canvas.");
   }

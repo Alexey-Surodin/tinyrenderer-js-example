@@ -1,14 +1,15 @@
 import { Color, getCanvas, Triangle } from "../utils/utils";
 import { Model } from "./model";
 import { Vec3 } from "../utils/utils";
-import { Camera } from "./camera";
+import { Camera, OrthographicCamera, PerspectiveCamera } from "./camera";
 import { linearInterpolation } from "./linearInterpolation";
 import { barycentricInterpolation } from "./barycentricInterpolation";
 import { DepthShader, ShaderBase } from "./shaders/shaderBase";
 import { Light } from "./light";
 
 const clearColor = new Color(0, 0, 0, 255);
-const camera = new Camera(new Vec3(0, 0, 2), new Vec3(0, 0, 0), new Vec3(0, 1, 0));
+const camera = new PerspectiveCamera(new Vec3(0, 0, 2), new Vec3(0, 0, 0), new Vec3(0, 1, 0));
+const orthoCamera = new OrthographicCamera(new Vec3(0, 0.1, 2), new Vec3(0, 0, 0), new Vec3(0, 1, 0), 4, 4);
 const useBarycentricInterpolation = true;
 const useZBuffer = true;
 
@@ -56,7 +57,7 @@ function drawTriangle(imageData: ImageData, tri: Triangle, shader: ShaderBase, z
     linearInterpolation(tri, shader, (pxlData: { pxl: Vec3, color: Color }) => setPixel(imageData, pxlData.pxl, pxlData.color, zBuffer));
 }
 
-function drawModel(imageData: ImageData, model: Model, camera: Camera, lights:Light[], shader: ShaderBase, zBuffer?: Uint8ClampedArray): void {
+function drawModel(imageData: ImageData, model: Model, camera: Camera, lights: Light[], shader: ShaderBase, zBuffer?: Uint8ClampedArray): void {
 
   // update unifrom
   shader.uniform.viewProjMatrix = camera.getViewProjMatrix();
@@ -112,4 +113,17 @@ export async function render(modelList: Array<{ model: Model, shader: ShaderBase
   }
 
   context.putImageData(imageData, 0, 0);
+
+  const depthShader = DepthShader.init();
+  const depthImageCanvas = await getCanvas("depthImage");
+  const depthImageContext = depthImageCanvas?.getContext("2d");
+  if (depthImageContext) {
+    zBuffer?.fill(255);
+    const depthData = depthImageContext.createImageData(canvasRect.width, canvasRect.height);
+    for (const { model, shader } of modelList) {
+      drawModel(depthData, model, orthoCamera, lights, depthShader, zBuffer);
+    }
+
+    depthImageContext.putImageData(depthData, 0, 0);
+  }
 }
