@@ -53,7 +53,7 @@ function readRleImageData(header: TgaHeader, dataView: DataView): Uint8Array {
   const pixelCount = header.width * header.height;
   const bpp = header.bitsperpixel >> 3;
 
-  let image = new Uint8Array(pixelCount * bpp);
+  const image = new Uint8Array(pixelCount * bpp);
 
   let currentPixelOffset = 0;
   let offset = imageDataOffset;
@@ -91,7 +91,7 @@ export function readTgaImage(array: Uint8Array): TgaImage {
   //read header
   const dataView = new DataView(array.buffer);
   const header = readTgaHeader(dataView);
-  let formats = Object.values(TgaBppFormat);
+  const formats = Object.values(TgaBppFormat);
 
   const width = header.width;
   const height = header.height;
@@ -133,13 +133,13 @@ export function getTexturePixel(point: Vec3, texture: TgaImage): Color {
   if (point.x > width || point.y > height)
     return color;
 
-  let x = Math.round(point.x * width);
-  let y = Math.round(point.y * height);
+  const x = Math.round(point.x * width);
+  const y = Math.round(point.y * height);
 
   const desc = texture.header.imagedescriptor;
 
-  let a = (desc & 0x20) ? height - y : y;
-  let b = !(desc & 0x10) ? x : width - x;
+  const a = (desc & 0x20) ? height - y : y;
+  const b = !(desc & 0x10) ? x : width - x;
 
   let index = a * width + b;
 
@@ -191,7 +191,7 @@ export function generateTestTexture(w: number, h: number, cellSize: number): Tga
       const oddX = Math.ceil(x / cellSize) % 2 == 0;
       const oddY = Math.ceil(y / cellSize) % 2 == 0;
 
-      let color = oddX !== oddY ? red : green;
+      const color = oddX !== oddY ? red : green;
       imageData[index++] = color[2];
       imageData[index++] = color[1];
       imageData[index++] = color[0];

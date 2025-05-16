@@ -18,8 +18,8 @@ const DirectionalLightGreen = new Light(new Vec3(), new Vec3(-1, 0, 0), new Colo
 const DirectionalLightBlue = new Light(new Vec3(), new Vec3(1, 0, 0), new Color(0, 0, 255, 255));
 
 function getPixelIndex(point: Vec3, width: number, height: number): number {
-  let x = Math.round(point.x);
-  let y = Math.round(point.y);
+  const x = Math.round(point.x);
+  const y = Math.round(point.y);
   return ((height - y) * width + x);
 }
 
@@ -68,7 +68,7 @@ function drawModel(imageData: ImageData, model: Model, camera: Camera, lights: L
   shader.uniform['normalMap'] = model.normalTexture;
 
   for (let i = 0; i < model.faces.length; i++) {
-    let triangle: Triangle = {
+    const triangle: Triangle = {
       p0: model.getVertex(i, 0),
       p1: model.getVertex(i, 1),
       p2: model.getVertex(i, 2),
@@ -120,7 +120,7 @@ export async function render(modelList: Array<{ model: Model, shader: ShaderBase
   if (depthImageContext) {
     zBuffer?.fill(255);
     const depthData = depthImageContext.createImageData(canvasRect.width, canvasRect.height);
-    for (const { model, shader } of modelList) {
+    for (const { model,  } of modelList) {
       drawModel(depthData, model, orthoCamera, lights, depthShader, zBuffer);
     }
 

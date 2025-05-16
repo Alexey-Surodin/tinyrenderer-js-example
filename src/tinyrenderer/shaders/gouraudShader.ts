@@ -32,11 +32,11 @@ export class GouraudShader extends Shader<UniformBase> {
 
   fragmentFunc(p: Vec3, t: Vec3, n: Vec3, b: Vec3): { pxl: Vec3; color: Color; } | null {
     const lights = this.uniform.lights;
-    let lightSumColor: Color = new Color(0, 0, 0, 255);
+    const lightSumColor: Color = new Color(0, 0, 0, 255);
     let surfaceColor: Color = new Color(255, 255, 255, 255);
 
     for (let i = 0; i < lights.length; i++) {
-      let intensity = Math.max(this.faceLightning[i].dot(b), 0);
+      const intensity = Math.max(this.faceLightning[i].dot(b), 0);
       lightSumColor.addColor(lights[i].color.clone().mulScalar(intensity));
     }
 

@@ -36,7 +36,7 @@ export class LambertShader extends Shader<LambertShaderUniform> {
   fragmentFunc(p: Vec3, t: Vec3, n: Vec3): { pxl: Vec3, color: Color } | null {
     const factor = this.uniform.factor ?? 0;
     const lights = this.uniform.lights;
-    let lightSumColor: Color = new Color(0, 0, 0, 255);
+    const lightSumColor: Color = new Color(0, 0, 0, 255);
     let surfaceColor: Color = new Color(255, 255, 255, 255);
     let normal: Vec3 = n;
 
@@ -46,7 +46,7 @@ export class LambertShader extends Shader<LambertShaderUniform> {
     }
 
     for (const light of lights) {
-      let intensity = Math.max((normal.norm().dot(light.direction) + factor), 0) / (1 + factor);
+      const intensity = Math.max((normal.norm().dot(light.direction) + factor), 0) / (1 + factor);
       lightSumColor.addColor(light.color.clone().mulScalar(intensity));
     }
 

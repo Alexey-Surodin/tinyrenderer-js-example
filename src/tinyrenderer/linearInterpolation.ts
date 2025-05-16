@@ -16,21 +16,21 @@ export function linearInterpolation(input: Triangle, shader: ShaderBase, onPixel
     [toVec3(tri.p2), tri.t2, tri.n2, new Vec3(0, 0, 1)]
   ].sort((a, b) => a[0].y - b[0].y);
 
-  let [p0, t0, n0] = arr[0];
-  let [p1, t1, n1] = arr[1];
-  let [p2, t2, n2] = arr[2];
+  const [p0, t0, n0] = arr[0];
+  const [p1, t1, n1] = arr[1];
+  const [p2, t2, n2] = arr[2];
 
-  let p2p0 = p2.clone().sub(p0);
-  let t2t0 = t2.clone().sub(t0);
-  let n2n0 = n2.clone().sub(n0);
+  const p2p0 = p2.clone().sub(p0);
+  const t2t0 = t2.clone().sub(t0);
+  const n2n0 = n2.clone().sub(n0);
 
-  let p2p1 = p2.clone().sub(p1);
-  let t2t1 = t2.clone().sub(t1);
-  let n2n1 = n2.clone().sub(n1);
+  const p2p1 = p2.clone().sub(p1);
+  const t2t1 = t2.clone().sub(t1);
+  const n2n1 = n2.clone().sub(n1);
 
-  let p1p0 = p1.clone().sub(p0);
-  let t1t0 = t1.clone().sub(t0);
-  let n1n0 = n1.clone().sub(n0);
+  const p1p0 = p1.clone().sub(p0);
+  const t1t0 = t1.clone().sub(t0);
+  const n1n0 = n1.clone().sub(n0);
 
   for (let y = p0.y; y <= p2.y; y++) {
     let s = (y - p0.y) / p2p0.y;
@@ -65,9 +65,9 @@ export function linearInterpolation(input: Triangle, shader: ShaderBase, onPixel
 
     for (let x = pl.x; x <= pr.x; x++) {
       const k = pl.x == pr.x ? 1 : (x - pl.x) / (pr.x - pl.x);
-      let p = pr.clone().sub(pl).mulScalar(k).add(pl);
-      let t = tr.clone().sub(tl).mulScalar(k).add(tl);
-      let n = nr.clone().sub(nl).mulScalar(k).add(nl);
+      const p = pr.clone().sub(pl).mulScalar(k).add(pl);
+      const t = tr.clone().sub(tl).mulScalar(k).add(tl);
+      const n = nr.clone().sub(nl).mulScalar(k).add(nl);
 
       const bMat = new Matrix4().identity();
       for (let i = 0; i < 3; i++) {

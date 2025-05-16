@@ -111,14 +111,11 @@ export class Vec3 {
   }
 
   cross(b: Vec3): Vec3 {
-    let a = this;
-
     return new Vec3(
-      a.y * b.z - a.z * b.y,
-      a.z * b.x - a.x * b.z,
-      a.x * b.y - a.y * b.x
-    )
-
+      this.y * b.z - this.z * b.y,
+      this.z * b.x - this.x * b.z,
+      this.x * b.y - this.y * b.x
+    );
   }
 
   clone(): Vec3 {
@@ -348,8 +345,8 @@ export class Matrix4 {
 }
 
 export function getTriNormal(a: Vec3, b: Vec3, c: Vec3): Vec3 {
-  let ab = b.clone().sub(a);
-  let ac = c.clone().sub(a);
+  const ab = b.clone().sub(a);
+  const ac = c.clone().sub(a);
   return ab.cross(ac).norm();
 }
 
