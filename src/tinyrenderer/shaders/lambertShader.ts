@@ -1,5 +1,5 @@
 import { getTexturePixel, getTexturePixelAsVec3, TgaImage } from "../../utils/tgaImage";
-import { Color, Matrix4, Triangle, Vec3 } from "../../utils/utils";
+import { Color, Matrix4, Triangle, Vec3, Vec4 } from "../../utils/utils";
 import { Shader, UniformBase } from "./shaderBase";
 
 export type LambertShaderUniform = UniformBase & {
@@ -13,6 +13,7 @@ export class LambertShader extends Shader<LambertShaderUniform> {
   static init(factor: number = 0): LambertShader {
     return new LambertShader({
       lights: [],
+      viewMatrix: new Matrix4(),
       viewInverse: new Matrix4(),
       viewPortMatrix: new Matrix4(),
       viewProjMatrix: new Matrix4(),
@@ -38,15 +39,17 @@ export class LambertShader extends Shader<LambertShaderUniform> {
     const lights = this.uniform.lights;
     const lightSumColor: Color = new Color(0, 0, 0, 255);
     let surfaceColor: Color = new Color(255, 255, 255, 255);
-    let normal: Vec3 = n;
+    let normal: Vec3 = n.norm();
 
-    if (this.uniform.normalMap) {
-      normal = getTexturePixelAsVec3(t, this.uniform.normalMap);
-      normal = this.uniform.viewInverse.multiplyVec3(normal);
-    }
+    // if (this.uniform.normalMap) {
+    //   normal = getTexturePixelAsVec3(t, this.uniform.normalMap).norm();
+    //   //normal = this.uniform.viewInverse.multiplyVec3(normal).norm();
+    // }
 
     for (const light of lights) {
-      const intensity = Math.max((normal.norm().dot(light.direction) + factor), 0) / (1 + factor);
+      const dir = light.direction.clone().negate();
+      const lightDir = this.uniform.viewMatrix.multiplyVec3(dir).norm();
+      const intensity = Math.max((normal.dot(lightDir) + factor), 0) / (1 + factor);
       lightSumColor.addColor(light.color.clone().mulScalar(intensity));
     }
 

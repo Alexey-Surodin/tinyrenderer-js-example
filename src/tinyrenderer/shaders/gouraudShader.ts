@@ -20,10 +20,13 @@ export class GouraudShader extends Shader<UniformBase> {
     const lights = this.uniform.lights;
     this.faceLightning = [];
     for (let i = 0; i < lights.length; i++) {
+      const dir = lights[i].direction.clone().negate();
+      const lightDir = this.uniform.viewMatrix.multiplyVec3(dir).norm();
+
       const v = new Vec3();
-      v.x = Math.max(0, tri.n0.dot(lights[i].direction));
-      v.y = Math.max(0, tri.n1.dot(lights[i].direction));
-      v.z = Math.max(0, tri.n2.dot(lights[i].direction));
+      v.x = Math.max(0, tri.n0.dot(lightDir));
+      v.y = Math.max(0, tri.n1.dot(lightDir));
+      v.z = Math.max(0, tri.n2.dot(lightDir));
       this.faceLightning.push(v);
     }
 
@@ -53,6 +56,7 @@ export class GouraudShader extends Shader<UniformBase> {
   static init(): GouraudShader {
     return new GouraudShader({
       lights: [],
+      viewMatrix: new Matrix4(),
       viewInverse: new Matrix4(),
       viewPortMatrix: new Matrix4(),
       viewProjMatrix: new Matrix4()

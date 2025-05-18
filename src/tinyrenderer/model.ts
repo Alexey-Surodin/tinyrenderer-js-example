@@ -1,4 +1,4 @@
-import { generateTestTexture, TgaImage } from "../utils/tgaImage";
+import { generateTestDiffuseTexture, generateTestNormalTexture, TgaImage } from "../utils/tgaImage";
 import { Vec3, Vec4 } from "../utils/utils";
 
 export class Model {
@@ -83,6 +83,7 @@ export function getTestModel(): Model {
   model.text = [[0, 0, 0], [0.9, 0, 0], [0.9, 0.9, 0], [0, 0.9, 0]];
   model.norm = [[0, 1, 0]];
   model.faces = [[[0, 0, 0], [1, 1, 0], [2, 2, 0]], [[0, 0, 0], [2, 2, 0], [3, 3, 0]]];
-  model.diffuseTexture = generateTestTexture(200, 200, 20);
+  model.diffuseTexture = generateTestDiffuseTexture(200, 200, 20);
+  model.normalTexture = generateTestNormalTexture(200, 200, new Vec3(0, 1, 0));
   return model;
 }

@@ -13,9 +13,10 @@ const orthoCamera = new OrthographicCamera(new Vec3(0, 0.1, 2), new Vec3(0, 0, 0
 const useBarycentricInterpolation = true;
 const useZBuffer = true;
 
+const DirWhiteLight = new Light(new Vec3(), new Vec3(0, -1, 1), new Color(255, 255, 255, 255));
 const DirectionalLightRed = new Light(new Vec3(), new Vec3(0, 0, -1), new Color(255, 0, 0, 255));
-const DirectionalLightGreen = new Light(new Vec3(), new Vec3(-1, 0, 0), new Color(0, 255, 0, 255));
-const DirectionalLightBlue = new Light(new Vec3(), new Vec3(1, 0, 0), new Color(0, 0, 255, 255));
+const DirectionalLightGreen = new Light(new Vec3(), new Vec3(1, 0, 0), new Color(0, 255, 0, 255));
+const DirectionalLightBlue = new Light(new Vec3(), new Vec3(-1, 0, 0), new Color(0, 0, 255, 255));
 
 function getPixelIndex(point: Vec3, width: number, height: number): number {
   const x = Math.round(point.x);
@@ -60,6 +61,7 @@ function drawTriangle(imageData: ImageData, tri: Triangle, shader: ShaderBase, z
 function drawModel(imageData: ImageData, model: Model, camera: Camera, lights: Light[], shader: ShaderBase, zBuffer?: Uint8ClampedArray): void {
 
   // update unifrom
+  shader.uniform.viewMatrix = camera.getViewMatrix();
   shader.uniform.viewProjMatrix = camera.getViewProjMatrix();
   shader.uniform.viewInverse = camera.getViewMatrix().inverse().transpose();
   shader.uniform.viewPortMatrix = camera.getViewPortMatrix(imageData.width, imageData.height, 255);
@@ -86,8 +88,26 @@ function drawModel(imageData: ImageData, model: Model, camera: Camera, lights: L
   }
 }
 
-export async function render(modelList: Array<{ model: Model, shader: ShaderBase }>): Promise<void> {
+async function drawDepthBuffer(zBuffer?: Uint8ClampedArray): Promise<void> {
+  const depthImageCanvas = await getCanvas("depthImage");
+  const depthImageContext = depthImageCanvas?.getContext("2d");
 
+  if (depthImageContext && zBuffer) {
+    const canvasRect = depthImageCanvas.getBoundingClientRect();
+    const depthData = depthImageContext.createImageData(canvasRect.width, canvasRect.height);
+    const depthImageData = depthData.data;
+    for (let i = 0, j = 0; i < zBuffer.length; i++) {
+      depthImageData[j++] = zBuffer[i];
+      depthImageData[j++] = zBuffer[i];
+      depthImageData[j++] = zBuffer[i];
+      depthImageData[j++] = 255;
+    }
+
+    depthImageContext.putImageData(depthData, 0, 0);
+  }
+}
+
+export async function render(modelList: Array<{ model: Model, shader: ShaderBase }>): Promise<void> {
   const canvas = await getCanvas();
   const context = canvas?.getContext("2d");
 
@@ -95,18 +115,16 @@ export async function render(modelList: Array<{ model: Model, shader: ShaderBase
     throw new Error("Failed to get 2d canvas context");
 
   const canvasRect = canvas.getBoundingClientRect();
-
   const imageData = context.createImageData(canvasRect.width, canvasRect.height);
-  let zBuffer: Uint8ClampedArray | undefined;
+  clearImage(imageData, clearColor);
 
+  let zBuffer: Uint8ClampedArray | undefined;
   if (useZBuffer) {
     zBuffer = new Uint8ClampedArray(imageData.height * imageData.width);
     zBuffer.fill(255);
   }
 
-  clearImage(imageData, clearColor);
-
-  const lights = [DirectionalLightRed, DirectionalLightGreen, DirectionalLightBlue];
+  const lights = [DirectionalLightRed, DirectionalLightGreen, DirectionalLightBlue, DirWhiteLight];
 
   for (const { model, shader } of modelList) {
     drawModel(imageData, model, camera, lights, shader, zBuffer);
@@ -114,16 +132,5 @@ export async function render(modelList: Array<{ model: Model, shader: ShaderBase
 
   context.putImageData(imageData, 0, 0);
 
-  const depthShader = DepthShader.init();
-  const depthImageCanvas = await getCanvas("depthImage");
-  const depthImageContext = depthImageCanvas?.getContext("2d");
-  if (depthImageContext) {
-    zBuffer?.fill(255);
-    const depthData = depthImageContext.createImageData(canvasRect.width, canvasRect.height);
-    for (const { model,  } of modelList) {
-      drawModel(depthData, model, orthoCamera, lights, depthShader, zBuffer);
-    }
-
-    depthImageContext.putImageData(depthData, 0, 0);
-  }
+  await drawDepthBuffer(zBuffer);
 }

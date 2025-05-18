@@ -126,6 +126,10 @@ export class Vec3 {
     return Math.sqrt(this.x ** 2 + this.y ** 2 + this.z ** 2);
   }
 
+  negate(): this {
+    return this.mulScalar(-1);
+  }
+
   norm(): this {
     const l = this.length();
     return this.mulScalar(l == 0 ? 0 : 1 / l);
@@ -239,16 +243,17 @@ export class Matrix4 {
     return this;
   }
 
-  multiplyVec3(b: Vec3): Vec3 {
+  multiplyVec3(b: Vec3, w: number = 0): Vec3 {
     const r = new Vec3();
     const a = this.data;
 
-    r.x = a[0] * b.x + a[1] * b.y + a[2] * b.z + a[3];
-    r.y = a[4] * b.x + a[5] * b.y + a[6] * b.z + a[7];
-    r.z = a[8] * b.x + a[9] * b.y + a[10] * b.z + a[11];
+    r.x = a[0] * b.x + a[1] * b.y + a[2] * b.z + w * a[3];
+    r.y = a[4] * b.x + a[5] * b.y + a[6] * b.z + w * a[7];
+    r.z = a[8] * b.x + a[9] * b.y + a[10] * b.z + w * a[11];
 
-    const w = a[12] * b.x + a[13] * b.y + a[14] * b.z + a[15];
-    r.mulScalar(1 / w);
+    const rw = a[12] * b.x + a[13] * b.y + a[14] * b.z + w * a[15];
+    if (w !== 0 && rw !== 0)
+      r.mulScalar(1 / rw);
 
     return r;
   }

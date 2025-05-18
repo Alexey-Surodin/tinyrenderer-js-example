@@ -3,12 +3,12 @@ import { Vec3 } from "../utils/utils";
 
 export abstract class Camera {
 
-  constructor(readonly position: Vec3, readonly eye: Vec3, readonly up: Vec3) {
+  constructor(readonly eye: Vec3, readonly target: Vec3, readonly up: Vec3) {
 
   }
 
   getViewMatrix(): Matrix4 {
-    const z = this.eye.clone().sub(this.position).norm();
+    const z = this.eye.clone().sub(this.target).norm();
     const x = this.up.cross(z).norm();
     const y = z.cross(x).norm();
 
@@ -34,9 +34,9 @@ export abstract class Camera {
     m.data[15] = 1;
 
     const t = new Matrix4().identity();
-    t.data[3] = -this.position.x;
-    t.data[7] = -this.position.y;
-    t.data[11] = -this.position.z;
+    t.data[3] = -this.eye.x;
+    t.data[7] = -this.eye.y;
+    t.data[11] = -this.eye.z;
 
     return m.multiply(t);
   }
@@ -73,10 +73,10 @@ export class PerspectiveCamera extends Camera {
   getProjMatrix(): Matrix4 {
     const m = new Matrix4().identity();
 
-    m.data[10] = (this.zFar + this.zNear) / (this.zFar - this.zNear);
+    m.data[10] = -(this.zFar + this.zNear) / (this.zFar - this.zNear);
     m.data[11] = -2 * this.zFar * this.zNear / (this.zFar - this.zNear);
 
-    m.data[14] = 1;
+    m.data[14] = -1;
     m.data[15] = 0;
 
     return m;
@@ -84,15 +84,12 @@ export class PerspectiveCamera extends Camera {
 }
 
 export class OrthographicCamera extends Camera {
-  zFar = 3;
-  zNear = 1;
-
   left = -0.5;
   right = -0.5;
   top = 0.5;
   bottom = -0.5;
 
-  constructor(position: Vec3, eye: Vec3, up: Vec3, width: number = 1, height: number = 1) {
+  constructor(position: Vec3, eye: Vec3, up: Vec3, width: number = 1, height: number = 1, readonly zNear: number = 1, readonly zFar: number = 10) {
     super(position, eye, up);
     this.right = width / 2;
     this.left = -this.right;
@@ -107,7 +104,7 @@ export class OrthographicCamera extends Camera {
     m.data[0] = 2 / (this.right - this.left);
     m.data[5] = 2 / (this.top - this.bottom);
 
-    m.data[10] = 2 / (this.zFar - this.zNear);
+    m.data[10] = -2 / (this.zFar - this.zNear);
     m.data[11] = -(this.zFar + this.zNear) / (this.zFar - this.zNear);
 
     m.data[14] = 0;

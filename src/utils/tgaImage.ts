@@ -158,9 +158,9 @@ export function getTexturePixel(point: Vec3, texture: TgaImage): Color {
   return color;
 }
 
-export function getTexturePixelAsVec3(point: Vec3, texture: TgaImage): Vec3{
+export function getTexturePixelAsVec3(point: Vec3, texture: TgaImage): Vec3 {
   const color = getTexturePixel(point, texture);
-  return new Vec3(color.b, color.g, color.r);
+  return new Vec3(color.b, color.g, color.r).mulScalar(2 / 255).addScalar(-1);
 }
 
 export async function readTexture(path: string | URL): Promise<TgaImage> {
@@ -172,7 +172,7 @@ export async function readTexture(path: string | URL): Promise<TgaImage> {
   return readTgaImage(byteArray);
 }
 
-export function generateTestTexture(w: number, h: number, cellSize: number): TgaImage {
+export function generateTestDiffuseTexture(w: number, h: number, cellSize: number): TgaImage {
   const header = new TgaHeader();
   header.width = w;
   header.height = h;
@@ -195,6 +195,32 @@ export function generateTestTexture(w: number, h: number, cellSize: number): Tga
       imageData[index++] = color[2];
       imageData[index++] = color[1];
       imageData[index++] = color[0];
+    }
+  }
+
+  return {
+    header: header,
+    imageData: imageData,
+  };
+}
+
+export function generateTestNormalTexture(w: number, h: number, norm: Vec3): TgaImage {
+  const header = new TgaHeader();
+  header.width = w;
+  header.height = h;
+  header.bitsperpixel = 3 * 8;
+
+  const imageData = new Uint8Array(w * h * 3);
+
+  let index = 0;
+
+  norm.norm().addScalar(1).mulScalar(255 / 2).round();
+
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      imageData[index++] = norm.x;
+      imageData[index++] = norm.y;
+      imageData[index++] = norm.z;
     }
   }
 
