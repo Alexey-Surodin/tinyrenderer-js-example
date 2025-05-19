@@ -41,10 +41,10 @@ export class LambertShader extends Shader<LambertShaderUniform> {
     let surfaceColor: Color = new Color(255, 255, 255, 255);
     let normal: Vec3 = n.norm();
 
-    // if (this.uniform.normalMap) {
-    //   normal = getTexturePixelAsVec3(t, this.uniform.normalMap).norm();
-    //   //normal = this.uniform.viewInverse.multiplyVec3(normal).norm();
-    // }
+    if (this.uniform.normalMap) {
+      normal = getTexturePixelAsVec3(t, this.uniform.normalMap);
+      normal = this.uniform.viewInverse.multiplyVec3(normal).norm();
+    }
 
     for (const light of lights) {
       const dir = light.direction.clone().negate();

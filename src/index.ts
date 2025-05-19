@@ -1,5 +1,5 @@
 import { getTestModel, Model } from "./tinyrenderer/model";
-import { render } from "./tinyrenderer/tinyrenderer";
+import { render, runRenderLoop } from "./tinyrenderer/tinyrenderer";
 import { readTexture } from "./utils/tgaImage";
 import { AfricanHeadModel } from "./obj/african_head/african_head";
 import { LambertShader } from "./tinyrenderer/shaders/lambertShader";
@@ -32,7 +32,9 @@ async function main(): Promise<void> {
     { model: testModel, shader: lambertShader }
   ];
 
-  render(modelList);
+  //render(modelList);
+  
+  runRenderLoop(modelList);
 }
 
 main();

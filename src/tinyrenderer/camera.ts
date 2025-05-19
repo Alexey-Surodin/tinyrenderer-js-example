@@ -2,9 +2,15 @@ import { Matrix4 } from "../utils/utils";
 import { Vec3 } from "../utils/utils";
 
 export abstract class Camera {
+  viewport: Vec3 = new Vec3(1, 1, 1);
 
   constructor(readonly eye: Vec3, readonly target: Vec3, readonly up: Vec3) {
 
+  }
+
+  setViewPort(width: number, height: number, depth: number): this {
+    this.viewport = new Vec3(width, height, depth);
+    return this;
   }
 
   getViewMatrix(): Matrix4 {
@@ -41,8 +47,9 @@ export abstract class Camera {
     return m.multiply(t);
   }
 
-  getViewPortMatrix(width: number, height: number, depth: number): Matrix4 {
+  getViewPortMatrix(): Matrix4 {
     const m = new Matrix4().identity();
+    const [width, height, depth] = [this.viewport.x, this.viewport.y, this.viewport.z];
 
     m.data[0] = width / 2;
     m.data[3] = width / 2;

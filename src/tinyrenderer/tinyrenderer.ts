@@ -6,17 +6,22 @@ import { linearInterpolation } from "./linearInterpolation";
 import { barycentricInterpolation } from "./barycentricInterpolation";
 import { DepthShader, ShaderBase } from "./shaders/shaderBase";
 import { Light } from "./light";
+import { move } from "../cameraControl";
 
 const clearColor = new Color(0, 0, 0, 255);
-const camera = new PerspectiveCamera(new Vec3(0, 0, 2), new Vec3(0, 0, 0), new Vec3(0, 1, 0));
+const perspectiveCamera = new PerspectiveCamera(new Vec3(0, 0, 2), new Vec3(0, 0, 0), new Vec3(0, 1, 0));
 const orthoCamera = new OrthographicCamera(new Vec3(0, 0.1, 2), new Vec3(0, 0, 0), new Vec3(0, 1, 0), 4, 4);
+
+const useOrthoCamera = false;
 const useBarycentricInterpolation = true;
 const useZBuffer = true;
 
-const DirWhiteLight = new Light(new Vec3(), new Vec3(0, -1, 1), new Color(255, 255, 255, 255));
-const DirectionalLightRed = new Light(new Vec3(), new Vec3(0, 0, -1), new Color(255, 0, 0, 255));
+const DirWhiteLight = new Light(new Vec3(), new Vec3(0, -1, -1), new Color(255, 255, 255, 255));
+const DirectionalLightRed = new Light(new Vec3(), new Vec3(0, 0, 1), new Color(255, 0, 0, 255));
 const DirectionalLightGreen = new Light(new Vec3(), new Vec3(1, 0, 0), new Color(0, 255, 0, 255));
 const DirectionalLightBlue = new Light(new Vec3(), new Vec3(-1, 0, 0), new Color(0, 0, 255, 255));
+
+const camera = useOrthoCamera ? orthoCamera : perspectiveCamera;
 
 function getPixelIndex(point: Vec3, width: number, height: number): number {
   const x = Math.round(point.x);
@@ -64,7 +69,7 @@ function drawModel(imageData: ImageData, model: Model, camera: Camera, lights: L
   shader.uniform.viewMatrix = camera.getViewMatrix();
   shader.uniform.viewProjMatrix = camera.getViewProjMatrix();
   shader.uniform.viewInverse = camera.getViewMatrix().inverse().transpose();
-  shader.uniform.viewPortMatrix = camera.getViewPortMatrix(imageData.width, imageData.height, 255);
+  shader.uniform.viewPortMatrix = camera.getViewPortMatrix();
   shader.uniform.lights = lights;
   shader.uniform['diffuseMap'] = model.diffuseTexture;
   shader.uniform['normalMap'] = model.normalTexture;
@@ -118,6 +123,8 @@ export async function render(modelList: Array<{ model: Model, shader: ShaderBase
   const imageData = context.createImageData(canvasRect.width, canvasRect.height);
   clearImage(imageData, clearColor);
 
+  camera.setViewPort(canvasRect.width, canvasRect.height, 255);
+
   let zBuffer: Uint8ClampedArray | undefined;
   if (useZBuffer) {
     zBuffer = new Uint8ClampedArray(imageData.height * imageData.width);
@@ -133,4 +140,14 @@ export async function render(modelList: Array<{ model: Model, shader: ShaderBase
   context.putImageData(imageData, 0, 0);
 
   await drawDepthBuffer(zBuffer);
+}
+
+export async function runRenderLoop(modelList: Array<{ model: Model, shader: ShaderBase }>): Promise<void> {
+  const deltaCameraMove = new Vec3(100, 0, 0);
+  const foo = () => {
+    move(camera, deltaCameraMove);
+    render(modelList);
+    setTimeout(foo, 100);
+  }
+  foo();
 }

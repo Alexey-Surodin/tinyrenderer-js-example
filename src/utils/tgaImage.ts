@@ -160,7 +160,7 @@ export function getTexturePixel(point: Vec3, texture: TgaImage): Color {
 
 export function getTexturePixelAsVec3(point: Vec3, texture: TgaImage): Vec3 {
   const color = getTexturePixel(point, texture);
-  return new Vec3(color.b, color.g, color.r).mulScalar(2 / 255).addScalar(-1);
+  return new Vec3(color.r, color.g, color.b).mulScalar(2 / 255).addScalar(-1);
 }
 
 export async function readTexture(path: string | URL): Promise<TgaImage> {
@@ -218,9 +218,9 @@ export function generateTestNormalTexture(w: number, h: number, norm: Vec3): Tga
 
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
-      imageData[index++] = norm.x;
-      imageData[index++] = norm.y;
       imageData[index++] = norm.z;
+      imageData[index++] = norm.y;
+      imageData[index++] = norm.x;
     }
   }
 
