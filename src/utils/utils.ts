@@ -214,6 +214,10 @@ export class Vec4 {
     this.w = Math.round(this.w);
     return this;
   }
+
+  toVec3(): Vec3 {
+    return new Vec3(this.x, this.y, this.z).mulScalar(1 / this.w);
+  }
 }
 
 export class Matrix4 {
@@ -302,19 +306,16 @@ export class Matrix4 {
   }
 
   inverse(): this {
-    this.transpose();
-
     const te = this.data,
+    n11 = te[0], n21 = te[4], n31 = te[8], n41 = te[12],
+    n12 = te[1], n22 = te[5], n32 = te[9], n42 = te[13],
+    n13 = te[2], n23 = te[6], n33 = te[10], n43 = te[14],
+    n14 = te[3], n24 = te[7], n34 = te[11], n44 = te[15],
 
-      n11 = te[0], n21 = te[1], n31 = te[2], n41 = te[3],
-      n12 = te[4], n22 = te[5], n32 = te[6], n42 = te[7],
-      n13 = te[8], n23 = te[9], n33 = te[10], n43 = te[11],
-      n14 = te[12], n24 = te[13], n34 = te[14], n44 = te[15],
-
-      t11 = n23 * n34 * n42 - n24 * n33 * n42 + n24 * n32 * n43 - n22 * n34 * n43 - n23 * n32 * n44 + n22 * n33 * n44,
-      t12 = n14 * n33 * n42 - n13 * n34 * n42 - n14 * n32 * n43 + n12 * n34 * n43 + n13 * n32 * n44 - n12 * n33 * n44,
-      t13 = n13 * n24 * n42 - n14 * n23 * n42 + n14 * n22 * n43 - n12 * n24 * n43 - n13 * n22 * n44 + n12 * n23 * n44,
-      t14 = n14 * n23 * n32 - n13 * n24 * n32 - n14 * n22 * n33 + n12 * n24 * n33 + n13 * n22 * n34 - n12 * n23 * n34;
+    t11 = n23 * n34 * n42 - n24 * n33 * n42 + n24 * n32 * n43 - n22 * n34 * n43 - n23 * n32 * n44 + n22 * n33 * n44,
+    t12 = n14 * n33 * n42 - n13 * n34 * n42 - n14 * n32 * n43 + n12 * n34 * n43 + n13 * n32 * n44 - n12 * n33 * n44,
+    t13 = n13 * n24 * n42 - n14 * n23 * n42 + n14 * n22 * n43 - n12 * n24 * n43 - n13 * n22 * n44 + n12 * n23 * n44,
+    t14 = n14 * n23 * n32 - n13 * n24 * n32 - n14 * n22 * n33 + n12 * n24 * n33 + n13 * n22 * n34 - n12 * n23 * n34;
 
     const det = n11 * t11 + n21 * t12 + n31 * t13 + n41 * t14;
 
@@ -326,26 +327,26 @@ export class Matrix4 {
     const detInv = 1 / det;
 
     te[0] = t11 * detInv;
-    te[1] = (n24 * n33 * n41 - n23 * n34 * n41 - n24 * n31 * n43 + n21 * n34 * n43 + n23 * n31 * n44 - n21 * n33 * n44) * detInv;
-    te[2] = (n22 * n34 * n41 - n24 * n32 * n41 + n24 * n31 * n42 - n21 * n34 * n42 - n22 * n31 * n44 + n21 * n32 * n44) * detInv;
-    te[3] = (n23 * n32 * n41 - n22 * n33 * n41 - n23 * n31 * n42 + n21 * n33 * n42 + n22 * n31 * n43 - n21 * n32 * n43) * detInv;
+    te[1] = t12 * detInv;
+    te[2] = t13 * detInv;
+    te[3] = t14 * detInv;
 
-    te[4] = t12 * detInv;
+    te[4] = (n24 * n33 * n41 - n23 * n34 * n41 - n24 * n31 * n43 + n21 * n34 * n43 + n23 * n31 * n44 - n21 * n33 * n44) * detInv;
     te[5] = (n13 * n34 * n41 - n14 * n33 * n41 + n14 * n31 * n43 - n11 * n34 * n43 - n13 * n31 * n44 + n11 * n33 * n44) * detInv;
-    te[6] = (n14 * n32 * n41 - n12 * n34 * n41 - n14 * n31 * n42 + n11 * n34 * n42 + n12 * n31 * n44 - n11 * n32 * n44) * detInv;
-    te[7] = (n12 * n33 * n41 - n13 * n32 * n41 + n13 * n31 * n42 - n11 * n33 * n42 - n12 * n31 * n43 + n11 * n32 * n43) * detInv;
+    te[6] = (n14 * n23 * n41 - n13 * n24 * n41 - n14 * n21 * n43 + n11 * n24 * n43 + n13 * n21 * n44 - n11 * n23 * n44) * detInv;
+    te[7] = (n13 * n24 * n31 - n14 * n23 * n31 + n14 * n21 * n33 - n11 * n24 * n33 - n13 * n21 * n34 + n11 * n23 * n34) * detInv;
 
-    te[8] = t13 * detInv;
-    te[9] = (n14 * n23 * n41 - n13 * n24 * n41 - n14 * n21 * n43 + n11 * n24 * n43 + n13 * n21 * n44 - n11 * n23 * n44) * detInv;
+    te[8] = (n22 * n34 * n41 - n24 * n32 * n41 + n24 * n31 * n42 - n21 * n34 * n42 - n22 * n31 * n44 + n21 * n32 * n44) * detInv;
+    te[9] = (n14 * n32 * n41 - n12 * n34 * n41 - n14 * n31 * n42 + n11 * n34 * n42 + n12 * n31 * n44 - n11 * n32 * n44) * detInv;
     te[10] = (n12 * n24 * n41 - n14 * n22 * n41 + n14 * n21 * n42 - n11 * n24 * n42 - n12 * n21 * n44 + n11 * n22 * n44) * detInv;
-    te[11] = (n13 * n22 * n41 - n12 * n23 * n41 - n13 * n21 * n42 + n11 * n23 * n42 + n12 * n21 * n43 - n11 * n22 * n43) * detInv;
+    te[11] = (n14 * n22 * n31 - n12 * n24 * n31 - n14 * n21 * n32 + n11 * n24 * n32 + n12 * n21 * n34 - n11 * n22 * n34) * detInv;
 
-    te[12] = t14 * detInv;
-    te[13] = (n13 * n24 * n31 - n14 * n23 * n31 + n14 * n21 * n33 - n11 * n24 * n33 - n13 * n21 * n34 + n11 * n23 * n34) * detInv;
-    te[14] = (n14 * n22 * n31 - n12 * n24 * n31 - n14 * n21 * n32 + n11 * n24 * n32 + n12 * n21 * n34 - n11 * n22 * n34) * detInv;
+    te[12] = (n23 * n32 * n41 - n22 * n33 * n41 - n23 * n31 * n42 + n21 * n33 * n42 + n22 * n31 * n43 - n21 * n32 * n43) * detInv;
+    te[13] = (n12 * n33 * n41 - n13 * n32 * n41 + n13 * n31 * n42 - n11 * n33 * n42 - n12 * n31 * n43 + n11 * n32 * n43) * detInv;
+    te[14] = (n13 * n22 * n41 - n12 * n23 * n41 - n13 * n21 * n42 + n11 * n23 * n42 + n12 * n21 * n43 - n11 * n22 * n43) * detInv;
     te[15] = (n12 * n23 * n31 - n13 * n22 * n31 + n13 * n21 * n32 - n11 * n23 * n32 - n12 * n21 * n33 + n11 * n22 * n33) * detInv;
 
-    return this.transpose();
+    return this;
   }
 }
 
@@ -366,3 +367,35 @@ export function getBarycentricCoord(t1: Vec4 | Vec3, t2: Vec4 | Vec3, t3: Vec4 |
   return new Vec3(-1, -1, -1);
 }
 
+export function getPixelIndex(point: Vec3, width: number, height: number): number {
+  const x = Math.round(point.x);
+  const y = Math.round(point.y);
+  return ((height - y) * width + x);
+}
+
+export function setPixel(imageData: ImageData, point: Vec3, color: Color, zBuffer?: Uint8ClampedArray): void {
+  if (point.x > imageData.width || point.y > imageData.height || point.z > 255 || point.z < 0)
+    return;
+
+  let index = getPixelIndex(point, imageData.width, imageData.height);
+
+  if (zBuffer) {
+    if (point.z < zBuffer[index])
+      zBuffer[index] = Math.round(point.z);
+    else
+      return;
+  }
+
+  index *= 4;
+  imageData.data[index++] = Math.round(color.r);
+  imageData.data[index++] = Math.round(color.g);
+  imageData.data[index++] = Math.round(color.b);
+  imageData.data[index] = Math.round(color.a);
+}
+
+export function clearImage(imageData: ImageData, color: Color): void {
+  const buffer = imageData.data.buffer;
+  const array = new Uint32Array(buffer);
+  const hexColor = color.a << 24 | color.b << 16 | color.g << 8 | color.r;
+  array.fill(hexColor);
+}

@@ -1,3 +1,4 @@
+import { TgaImage } from "../../utils/tgaImage";
 import { Color, Matrix4, Triangle } from "../../utils/utils";
 import { Vec3 } from "../../utils/utils";
 import { Light } from "../light";
@@ -8,20 +9,31 @@ export type UniformBase = {
   viewPortMatrix: Matrix4,
   viewInverse: Matrix4,
   lights: Light[],
+
+  diffuseMap?: TgaImage,
+  normalMap?: TgaImage,
+
   [key: string]: any,
 }
 
 export abstract class Shader<T extends UniformBase> {
+  abstract readonly name: string;
   constructor(public uniform: T) { }
 
   abstract vertexFunc(tri: Triangle): Triangle;
   abstract fragmentFunc(p: Vec3, t: Vec3, n: Vec3, b?: Vec3): { pxl: Vec3, color: Color } | null;
+
+  toString(): string {
+    return this.name;
+  }
 }
 
 export type ShaderBase = Shader<UniformBase>;
 
 
 export class DepthShader extends Shader<UniformBase> {
+  readonly name = 'Depth Shader';
+
   override vertexFunc(tri: Triangle): Triangle {
     const viewProjMatrix = this.uniform.viewProjMatrix;
     tri.p0 = viewProjMatrix.multiplyVec4(tri.p0);

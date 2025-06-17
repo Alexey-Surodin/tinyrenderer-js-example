@@ -3,6 +3,7 @@ import { Triangle, Vec3, Color, Matrix4 } from "../../utils/utils";
 import { Shader, UniformBase } from "./shaderBase";
 
 export class GouraudShader extends Shader<UniformBase> {
+  readonly name = 'Gouraud Shader';
 
   faceLightning: Vec3[] = [];
 

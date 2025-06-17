@@ -1,5 +1,5 @@
 import { getTexturePixel, getTexturePixelAsVec3, TgaImage } from "../../utils/tgaImage";
-import { Color, Matrix4, Triangle, Vec3, Vec4 } from "../../utils/utils";
+import { Color, Matrix4, Triangle, Vec3 } from "../../utils/utils";
 import { Shader, UniformBase } from "./shaderBase";
 
 export type LambertShaderUniform = UniformBase & {
@@ -9,6 +9,7 @@ export type LambertShaderUniform = UniformBase & {
 };
 
 export class LambertShader extends Shader<LambertShaderUniform> {
+  readonly name = 'Lambert Shader';
 
   static init(factor: number = 0): LambertShader {
     return new LambertShader({

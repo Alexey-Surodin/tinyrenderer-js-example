@@ -1,5 +1,6 @@
 import { generateTestDiffuseTexture, generateTestNormalTexture, TgaImage } from "../utils/tgaImage";
 import { Vec3, Vec4 } from "../utils/utils";
+import { ShaderBase } from "./shaders/shaderBase";
 
 export class Model {
   vert = Array<Array<number>>();
@@ -7,8 +8,11 @@ export class Model {
   norm = Array<Array<number>>();
   faces = Array<Array<Array<number>>>();
 
+  shader?: ShaderBase;
+
   diffuseTexture?: TgaImage;
   normalTexture?: TgaImage;
+  normalTangentMap?: TgaImage;
 
   parse(text: string): this {
 
