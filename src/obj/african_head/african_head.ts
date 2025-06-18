@@ -4,6 +4,7 @@ import headDiffuseFile from "./african_head_diffuse.tga";
 import headNormalFile from "./african_head_nm.tga";
 import headNormalTangentFile from "./african_head_nm_tangent.tga";
 import headSpecFile from "./african_head_spec.tga";
+import gridFile from "./grid.tga"
 
 import innerEyeModelFile from "./african_head_eye_inner.txt";
 import innerEyeDiffuseFile from "./african_head_eye_inner_diffuse.tga";
@@ -24,6 +25,7 @@ export class AfricanHeadModel {
   public static headNormal = headNormalFile;
   public static headNormalTangent = headNormalTangentFile;
   public static headSpec = headSpecFile;
+  public static headGrid = gridFile;
 
   public static innerEye = innerEyeModelFile;
   public static innerEyeDiffuse = innerEyeDiffuseFile;

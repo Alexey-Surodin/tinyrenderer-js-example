@@ -12,6 +12,7 @@ export type UniformBase = {
 
   diffuseMap?: TgaImage,
   normalMap?: TgaImage,
+  tangentNormalMap?: TgaImage,
 
   [key: string]: any,
 }

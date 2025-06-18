@@ -1,11 +1,12 @@
 import { getTestModel, Model } from "./tinyrenderer/model";
-import { render, renderOptions, runRenderLoop } from "./tinyrenderer/tinyrenderer";
+import { render, runRenderLoop } from "./tinyrenderer/tinyrenderer";
 import { readTexture } from "./utils/tgaImage";
 import { AfricanHeadModel } from "./obj/african_head/african_head";
 import { LambertShader } from "./tinyrenderer/shaders/lambertShader";
 import { GouraudShader } from "./tinyrenderer/shaders/gouraudShader";
 import { DepthShader } from "./tinyrenderer/shaders/shaderBase";
 import { GUI } from 'lil-gui';
+import { RenderOptions } from "./tinyrenderer/renerOptions";
 
 const gui = new GUI();
 
@@ -17,24 +18,18 @@ async function main(): Promise<void> {
   const shaders = [lambertShader, depthShader, gouraudShader];
   const shaderMap = new Map((shaders.map(s => [s.name, s])));
 
-  const options: renderOptions = {
-    useBarycentricInterpolation: true,
-    useOrthoCamera: false,
-    useZBuffer: true,
-    rotate: false,
-  }
-
-  const renderGui = gui.addFolder('render options');
-  renderGui.add(options, "useBarycentricInterpolation");
-  renderGui.add(options, "useOrthoCamera");
-  renderGui.add(options, "useZBuffer");
-  renderGui.add(options, "rotate");
+  const renderGui = gui.addFolder('RenderOptions');
+  renderGui.add(RenderOptions, "useBarycentricInterpolation");
+  renderGui.add(RenderOptions, "useOrthoCamera");
+  renderGui.add(RenderOptions, "useZBuffer");
+  renderGui.add(RenderOptions, "useTangentNormalMap");
+  renderGui.add(RenderOptions, "rotate");
 
   const head = new Model().parse(AfricanHeadModel.head);
   head.shader = lambertShader;
   head.diffuseTexture = await readTexture(AfricanHeadModel.headDiffuse);
   head.normalTexture = await readTexture(AfricanHeadModel.headNormal);
-  head.normalTangentMap = await readTexture(AfricanHeadModel.headNormalTangent);
+  head.normalTangentTexture = await readTexture(AfricanHeadModel.headNormalTangent);
 
   const headGUI = gui.addFolder('Head');
   headGUI.add(head, 'shader', Array.from(shaderMap.values()));
@@ -54,20 +49,20 @@ async function main(): Promise<void> {
 
   const models = [head, innerEye, checkboard];
 
-  render(models, options);
+  render(models);
 
   let cancelLoop: (() => void) | undefined;
   gui.onChange(async () => {
-    if (cancelLoop){
+    if (cancelLoop) {
       cancelLoop();
       cancelLoop = undefined;
     }
 
-    if (options.rotate) {
-      cancelLoop = await runRenderLoop(models, options);
+    if (RenderOptions.rotate) {
+      cancelLoop = await runRenderLoop(models);
     }
     else {
-      render(models, options);
+      render(models);
     }
 
   });

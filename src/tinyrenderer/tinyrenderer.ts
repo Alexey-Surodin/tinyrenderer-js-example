@@ -7,6 +7,7 @@ import { barycentricInterpolation } from "./barycentricInterpolation";
 import { ShaderBase } from "./shaders/shaderBase";
 import { Light } from "./light";
 import { move } from "../cameraControl";
+import { RenderOptions } from "./renerOptions";
 
 const clearColor = new Color(0, 0, 0, 255);
 const perspectiveCamera = new PerspectiveCamera(new Vec3(0, 0, 2), new Vec3(0, 0, 0), new Vec3(0, 1, 0));
@@ -17,21 +18,14 @@ const DirectionalLightRed = new Light(new Vec3(), new Vec3(0, 0, 1), new Color(2
 const DirectionalLightGreen = new Light(new Vec3(), new Vec3(1, 0, 0), new Color(0, 255, 0, 255));
 const DirectionalLightBlue = new Light(new Vec3(), new Vec3(-1, 0, 0), new Color(0, 0, 255, 255));
 
-export type renderOptions = {
-  useZBuffer: boolean,
-  useBarycentricInterpolation: boolean,
-  useOrthoCamera: boolean,
-  rotate: boolean,
-}
-
-function drawTriangle(imageData: ImageData, tri: Triangle, shader: ShaderBase, options: renderOptions, zBuffer?: Uint8ClampedArray): void {
-  if (options.useBarycentricInterpolation)
+function drawTriangle(imageData: ImageData, tri: Triangle, shader: ShaderBase, zBuffer?: Uint8ClampedArray): void {
+  if (RenderOptions.useBarycentricInterpolation)
     barycentricInterpolation(tri, shader, (pxlData: { pxl: Vec3, color: Color }) => setPixel(imageData, pxlData.pxl, pxlData.color, zBuffer));
   else
     linearInterpolation(tri, shader, (pxlData: { pxl: Vec3, color: Color }) => setPixel(imageData, pxlData.pxl, pxlData.color, zBuffer));
 }
 
-function drawModel(imageData: ImageData, model: Model, camera: Camera, lights: Light[], options: renderOptions, zBuffer?: Uint8ClampedArray): void {
+function drawModel(imageData: ImageData, model: Model, camera: Camera, lights: Light[], zBuffer?: Uint8ClampedArray): void {
   const shader = model.shader;
   if (!shader)
     return;
@@ -43,6 +37,7 @@ function drawModel(imageData: ImageData, model: Model, camera: Camera, lights: L
   shader.uniform.lights = lights;
   shader.uniform.diffuseMap = model.diffuseTexture;
   shader.uniform.normalMap = model.normalTexture;
+  shader.uniform.tangentNormalMap = model.normalTangentTexture;
 
   for (let i = 0; i < model.faces.length; i++) {
     const triangle: Triangle = {
@@ -59,7 +54,7 @@ function drawModel(imageData: ImageData, model: Model, camera: Camera, lights: L
       n2: model.getNormal(i, 2),
     }
 
-    drawTriangle(imageData, triangle, shader, options, zBuffer);
+    drawTriangle(imageData, triangle, shader, zBuffer);
   }
 }
 
@@ -82,7 +77,7 @@ async function drawDepthBuffer(zBuffer?: Uint8ClampedArray): Promise<void> {
   }
 }
 
-export async function render(models: Model[], options: renderOptions): Promise<void> {
+export async function render(models: Model[]): Promise<void> {
   const canvas = await getCanvas();
   const context = canvas?.getContext("2d");
 
@@ -93,11 +88,11 @@ export async function render(models: Model[], options: renderOptions): Promise<v
   const imageData = context.createImageData(canvasRect.width, canvasRect.height);
   clearImage(imageData, clearColor);
 
-  const camera = options.useOrthoCamera ? orthoCamera : perspectiveCamera;
+  const camera = RenderOptions.useOrthoCamera ? orthoCamera : perspectiveCamera;
   camera.setViewPort(canvasRect.width, canvasRect.height, 255);
 
   let zBuffer: Uint8ClampedArray | undefined;
-  if (options.useZBuffer) {
+  if (RenderOptions.useZBuffer) {
     zBuffer = new Uint8ClampedArray(imageData.height * imageData.width);
     zBuffer.fill(255);
   }
@@ -105,7 +100,7 @@ export async function render(models: Model[], options: renderOptions): Promise<v
   const lights = [DirectionalLightRed, DirectionalLightGreen, DirectionalLightBlue, DirWhiteLight];
 
   for (const model of models) {
-    drawModel(imageData, model, camera, lights, options, zBuffer);
+    drawModel(imageData, model, camera, lights, zBuffer);
   }
 
   context.putImageData(imageData, 0, 0);
@@ -113,18 +108,18 @@ export async function render(models: Model[], options: renderOptions): Promise<v
   await drawDepthBuffer(zBuffer);
 }
 
-export async function runRenderLoop(models: Model[], options: renderOptions): Promise<() => void> {
+export async function runRenderLoop(models: Model[]): Promise<() => void> {
   const deltaCameraMove = new Vec3(100, 0, 0);
   let requestHandle: number;
 
   const cancel = () => cancelAnimationFrame(requestHandle);
 
   const frame = () => {
-    if (options.rotate) {
+    if (RenderOptions.rotate) {
       move(orthoCamera, deltaCameraMove);
       move(perspectiveCamera, deltaCameraMove);
     }
-    render(models, options);
+    render(models);
     requestHandle = requestAnimationFrame(frame);
   }
   requestHandle = requestAnimationFrame(frame);

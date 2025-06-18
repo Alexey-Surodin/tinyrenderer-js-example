@@ -20,7 +20,6 @@ export async function getCanvas(id?: string): Promise<HTMLCanvasElement> {
   return canvas;
 }
 
-
 export class Color {
   constructor(
     public r: number = 0,
@@ -398,4 +397,29 @@ export function clearImage(imageData: ImageData, color: Color): void {
   const array = new Uint32Array(buffer);
   const hexColor = color.a << 24 | color.b << 16 | color.g << 8 | color.r;
   array.fill(hexColor);
+}
+
+export function getTangentBasis(points: Vec3[], texCoords: Vec3[]): Vec3[] {
+  const p0p1 = points[1].clone().sub(points[0]);
+  const p0p2 = points[2].clone().sub(points[0]);
+
+  const t0t1 = texCoords[1].clone().sub(texCoords[0]);
+  const t0t2 = texCoords[2].clone().sub(texCoords[0]);
+
+  const det = 1 / (t0t1.x * t0t2.y - t0t2.x * t0t1.y);
+
+  const t = new Vec3();
+  const b = new Vec3();
+
+  t.x = det * (t0t2.y * p0p1.x - t0t1.y * p0p2.x);
+  t.y = det * (t0t2.y * p0p1.y - t0t1.y * p0p2.y);
+  t.z = det * (t0t2.y * p0p1.z - t0t1.y * p0p2.z);
+  t.norm();
+
+  b.x = det * (-t0t2.x * p0p1.x + t0t1.x * p0p2.x);
+  b.y = det * (-t0t2.x * p0p1.y + t0t1.x * p0p2.y);
+  b.z = det * (-t0t2.x * p0p1.z + t0t1.x * p0p2.z);
+  b.norm();
+
+  return [t, b];
 }

@@ -12,7 +12,7 @@ export class Model {
 
   diffuseTexture?: TgaImage;
   normalTexture?: TgaImage;
-  normalTangentMap?: TgaImage;
+  normalTangentTexture?: TgaImage;
 
   parse(text: string): this {
 
