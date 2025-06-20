@@ -4,9 +4,7 @@ import { Vec3 } from "../utils/utils";
 export abstract class Camera {
   viewport: Vec3 = new Vec3(1, 1, 1);
 
-  constructor(readonly eye: Vec3, readonly target: Vec3, readonly up: Vec3) {
-
-  }
+  constructor(readonly eye: Vec3, readonly target: Vec3, readonly up: Vec3) { }
 
   setViewPort(v: Vec3): this {
     this.viewport = v;

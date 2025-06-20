@@ -1,21 +1,15 @@
-import { TgaImage } from "../../utils/tgaImage";
 import { Color, Matrix4, Triangle } from "../../utils/utils";
 import { Vec3 } from "../../utils/utils";
+import { Camera } from "../camera";
 import { Light } from "../light";
+import { Model } from "../model";
 
 export type UniformBase = {
   viewMatrix: Matrix4,
   viewProjMatrix: Matrix4,
   viewPortMatrix: Matrix4,
   viewInverse: Matrix4,
-  shadowM: Matrix4,
-  lights: Light[],
-
-  diffuseMap?: TgaImage,
-  normalMap?: TgaImage,
-  tangentNormalMap?: TgaImage,
-
-  [key: string]: any,
+  lights: Light[]
 }
 
 export abstract class Shader<T extends UniformBase> {
@@ -25,8 +19,26 @@ export abstract class Shader<T extends UniformBase> {
   abstract vertexFunc(tri: Triangle): Triangle;
   abstract fragmentFunc(p: Vec3, t: Vec3, n: Vec3, b?: Vec3): { pxl: Vec3, color: Color } | null;
 
+  updateUniform(camera: Camera, lights: Light[], _: Model): void {
+    const viewM = this.uniform.viewMatrix = camera.getViewMatrix();
+    this.uniform.viewProjMatrix = camera.getViewProjMatrix();
+    this.uniform.viewPortMatrix = camera.getViewPortMatrix();
+    this.uniform.viewInverse = viewM.clone().inverse().transpose();
+    this.uniform.lights = lights;
+  }
+
   toString(): string {
     return this.name;
+  }
+
+  static getBaseUniform(): UniformBase {
+    return {
+      lights: [],
+      viewMatrix: new Matrix4(),
+      viewInverse: new Matrix4(),
+      viewPortMatrix: new Matrix4(),
+      viewProjMatrix: new Matrix4(),
+    };
   }
 }
 
@@ -49,13 +61,6 @@ export class DepthShader extends Shader<UniformBase> {
   }
 
   static init(): DepthShader {
-    return new DepthShader({
-      lights: [],
-      viewMatrix: new Matrix4(),
-      viewInverse: new Matrix4(),
-      viewPortMatrix: new Matrix4(),
-      viewProjMatrix: new Matrix4(),
-      shadowM: new Matrix4(),
-    });
+    return new DepthShader(Shader.getBaseUniform());
   }
 }

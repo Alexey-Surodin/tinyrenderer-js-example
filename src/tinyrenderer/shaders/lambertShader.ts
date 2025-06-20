@@ -1,40 +1,70 @@
 import { getTexturePixel, getTexturePixelAsVec3, TgaImage } from "../../utils/tgaImage";
 import { Color, getPixelIndex, getTangentBasis, Matrix4, Triangle, Vec3 } from "../../utils/utils";
+import { Camera } from "../camera";
+import { Light } from "../light";
+import { Model } from "../model";
 import { RenderOptions } from "../renerOptions";
 import { Shader, UniformBase } from "./shaderBase";
 
 export type LambertShaderUniform = UniformBase & {
-  factor?: number,
+  tangentMatrix: Matrix4,
+  lightsDir: Vec3[],
+  shadowM: Matrix4[],
   diffuseMap?: TgaImage,
-  color?: Color
+  normalMap?: TgaImage,
+  tangentNormalMap?: TgaImage,
+  color?: Color,
 };
 
 export class LambertShader extends Shader<LambertShaderUniform> {
   readonly name = 'Lambert Shader';
 
-  tangent: Vec3 = new Vec3();
-  bitangent: Vec3 = new Vec3();
+  static init(): LambertShader {
+    const lambertUniform = {
+      tangentMatrix: new Matrix4(),
+      shadowM: [],
+      lightsDir: [],
+    };
+    const uniform = Object.assign(Shader.getBaseUniform(), lambertUniform);
+    return new LambertShader(uniform);
+  }
 
-  static init(factor: number = 0): LambertShader {
-    return new LambertShader({
-      lights: [],
-      viewMatrix: new Matrix4(),
-      viewInverse: new Matrix4(),
-      viewPortMatrix: new Matrix4(),
-      viewProjMatrix: new Matrix4(),
-      shadowM: new Matrix4(),
-      factor: Math.max(Math.min(factor, 1), 0),
-    });
+  override updateUniform(camera: Camera, lights: Light[], model: Model): void {
+    super.updateUniform(camera, lights, model);
+
+    this.uniform.lightsDir = [];
+    this.uniform.shadowM = [];
+    this.uniform.diffuseMap = model.diffuseTexture;
+    this.uniform.normalMap = model.normalTexture;
+    this.uniform.tangentNormalMap = model.normalTangentTexture;
+
+    const dir = new Vec3();
+    const viewPInv = (this.uniform.viewPortMatrix.clone().multiply(this.uniform.viewProjMatrix)).inverse();
+
+    for (const light of lights) {
+      dir.copy(light.direction).negate();
+      this.uniform.lightsDir.push(this.uniform.viewMatrix.multiplyVec3(dir).norm());
+
+      if (light.shadowMap?.matrix) {
+        this.uniform.shadowM.push(light.shadowMap.matrix.clone().multiply(viewPInv))
+      }
+    }
   }
 
   vertexFunc(tri: Triangle): Triangle {
-
     if (RenderOptions.useTangentNormalMap) {
       const viewMatrix = this.uniform.viewMatrix;
       const p0 = viewMatrix.multiplyVec3(tri.p0.toVec3());
       const p1 = viewMatrix.multiplyVec3(tri.p1.toVec3());
       const p2 = viewMatrix.multiplyVec3(tri.p2.toVec3());
-      [this.tangent, this.bitangent] = getTangentBasis([p0, p1, p2], [tri.t0, tri.t1, tri.t2]);
+      const [tangent, bitangent] = getTangentBasis([p0, p1, p2], [tri.t0, tri.t1, tri.t2]);
+
+      this.uniform.tangentMatrix.data = [
+        tangent.x, bitangent.x, 0, 0,
+        tangent.y, bitangent.y, 0, 0,
+        tangent.z, bitangent.z, 0, 0,
+        0, 0, 0, 0,
+      ];
     }
 
     const viewProjMatrix = this.uniform.viewProjMatrix;
@@ -51,24 +81,19 @@ export class LambertShader extends Shader<LambertShaderUniform> {
   }
 
   fragmentFunc(p: Vec3, t: Vec3, n: Vec3): { pxl: Vec3, color: Color } | null {
-    const factor = this.uniform.factor ?? 0;
     const lights = this.uniform.lights;
     const lightSumColor: Color = new Color(0, 0, 0, 255);
     let surfaceColor: Color = new Color(255, 255, 255, 255);
     let normal: Vec3;
 
     if (RenderOptions.useTangentNormalMap && this.uniform.tangentNormalMap) {
-      normal = getTexturePixelAsVec3(t, this.uniform.tangentNormalMap);
       n.norm();
-      const tangentMatrix = new Matrix4();
-      tangentMatrix.data = [
-        this.tangent.x, this.bitangent.x, n.x, 0,
-        this.tangent.y, this.bitangent.y, n.y, 0,
-        this.tangent.z, this.bitangent.z, n.z, 0,
-        0, 0, 0, 0,
-      ];
+      this.uniform.tangentMatrix.data[2] = n.x;
+      this.uniform.tangentMatrix.data[6] = n.y;
+      this.uniform.tangentMatrix.data[10] = n.z;
 
-      normal = tangentMatrix.multiplyVec3(normal).norm();
+      normal = getTexturePixelAsVec3(t, this.uniform.tangentNormalMap);
+      normal = this.uniform.tangentMatrix.multiplyVec3(normal).norm();
     }
     else if (this.uniform.normalMap) {
       normal = getTexturePixelAsVec3(t, this.uniform.normalMap);
@@ -78,20 +103,21 @@ export class LambertShader extends Shader<LambertShaderUniform> {
       normal = n.norm();
     }
 
-    for (const light of lights) {
-      const dir = light.direction.clone().negate();
-      const lightDir = this.uniform.viewMatrix.multiplyVec3(dir).norm();
-      let intensity = Math.max((normal.dot(lightDir) + factor), 0) / (1 + factor);
+    for (let i = 0; i < lights.length; i++) {
+      const light = lights[i];
+      const lightDir = this.uniform.lightsDir[i];
+      let intensity = Math.max(normal.dot(lightDir), 0);
 
       if (RenderOptions.shadowPassEnable && light.shadowMap) {
         const shadow = light.shadowMap;
-        const pWorld = this.uniform.shadowM.multiplyVec3(p, 1.0)
-        const point = shadow.matrix.multiplyVec3(pWorld, 1.0);
+        const point = this.uniform.shadowM[i].multiplyVec3(p, 1.0);
+
         if (point.x >= 0 && point.y >= 0 && point.x < shadow.viewport.x && point.y < shadow.viewport.y) {
           const index = getPixelIndex(point, shadow.viewport.x, shadow.viewport.y);
-          const sh = shadow.map[index];
-          if (sh + 1 < point.z)
+
+          if (shadow.map[index] + 1 < point.z) {
             intensity *= 0.3;
+          }
         }
       }
 

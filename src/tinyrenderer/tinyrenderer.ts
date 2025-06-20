@@ -19,16 +19,8 @@ function drawModel(model: Model, camera: Camera, lights: Light[], onPixelCallbac
   const shader = model.shader;
   if (!shader)
     return;
-  // update unifrom
-  const viewM = shader.uniform.viewMatrix = camera.getViewMatrix();
-  const viewprojM = shader.uniform.viewProjMatrix = camera.getViewProjMatrix();
-  shader.uniform.viewInverse = viewM.clone().inverse().transpose();
-  const viewportM = shader.uniform.viewPortMatrix = camera.getViewPortMatrix();
-  shader.uniform.shadowM = (viewportM.clone().multiply(viewprojM)).inverse();
-  shader.uniform.lights = lights;
-  shader.uniform.diffuseMap = model.diffuseTexture;
-  shader.uniform.normalMap = model.normalTexture;
-  shader.uniform.tangentNormalMap = model.normalTangentTexture;
+
+  shader.updateUniform(camera, lights, model);
 
   for (let i = 0; i < model.faces.length; i++) {
     const triangle: Triangle = {
@@ -128,26 +120,24 @@ export async function runRenderLoop(models: Model[]): Promise<() => void> {
   return cancel;
 }
 
-async function shadowPass(models: Model[], light: Light, viewport: Vec3) {
+function shadowPass(models: Model[], light: Light, viewport: Vec3): void {
+  if (light.shadowMap)
+    return;
+
   shadowCamera.eye.mulScalar(0).add(light.position);
   shadowCamera.setViewPort(viewport);
-
+  const viewProjM = shadowCamera.getViewProjMatrix();
+  const viewPortM = shadowCamera.getViewPortMatrix();
+  const shadowMat = viewPortM.multiply(viewProjM);
   const size = viewport.x * viewport.y;
 
-  if (light.shadowMap?.map?.length != size) {
-    const zBuffer = new Uint8ClampedArray(size);
-    const viewProjM = shadowCamera.getViewProjMatrix();
-    const viewPortM = shadowCamera.getViewPortMatrix();
-    const shadowMat = viewPortM.multiply(viewProjM);
-    light.shadowMap = { viewport: viewport, map: zBuffer, matrix: shadowMat };
-  }
-  const shadow = light.shadowMap;
-  shadow.map.fill(255);
+  const zBuffer = new Uint8ClampedArray(size);
+  zBuffer.fill(255);
 
   const setDepth = (pxlData: { pxl: Vec3, color: Color }) => {
     const index = getPixelIndex(pxlData.pxl, viewport.x, viewport.y);
-    if (index < size && pxlData.pxl.z < shadow.map[index]) {
-      shadow.map[index] = Math.round(pxlData.pxl.z);
+    if (index < size && pxlData.pxl.z < zBuffer[index]) {
+      zBuffer[index] = Math.round(pxlData.pxl.z);
     }
   }
 
@@ -157,4 +147,6 @@ async function shadowPass(models: Model[], light: Light, viewport: Vec3) {
     drawModel(model, shadowCamera, [light], setDepth);
     model.shader = modleShader;
   }
+
+  light.shadowMap = { viewport: viewport, map: zBuffer, matrix: shadowMat };
 }

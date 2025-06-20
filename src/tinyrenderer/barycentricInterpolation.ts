@@ -2,7 +2,6 @@ import { Color, getBarycentricCoord, Triangle, Vec3 } from "../utils/utils";
 import { ShaderBase } from "./shaders/shaderBase";
 
 export function barycentricInterpolation(input: Triangle, shader: ShaderBase, onPixelCallback: (pxlData: { pxl: Vec3, color: Color }) => void): void {
-
   const viewPortMatrix = shader.uniform.viewPortMatrix;
 
   //get triangle in clip space
@@ -26,6 +25,10 @@ export function barycentricInterpolation(input: Triangle, shader: ShaderBase, on
   const ymax = Math.round(Math.max(0, Math.max(p0.y, p1.y, p2.y)));
 
   const v = new Vec3();
+  const izt = new Vec3();
+  const izn = new Vec3();
+  const tmp = new Vec3();
+
   for (let y = ymin; y <= ymax; y++) {
     for (let x = xmin; x <= xmax; x++) {
       v.x = x;
@@ -41,13 +44,12 @@ export function barycentricInterpolation(input: Triangle, shader: ShaderBase, on
       const b0 = b.x * iz0;
       const b1 = b.y * iz1;
       const b2 = b.z * iz2;
-
       const z = 1 / (b0 + b1 + b2);
 
-      const izt = tri.t0.clone().mulScalar(b0).add(tri.t1.clone().mulScalar(b1)).add(tri.t2.clone().mulScalar(b2));
+      izt.copy(tri.t0).mulScalar(b0).add(tmp.copy(tri.t1).mulScalar(b1)).add(tmp.copy(tri.t2).mulScalar(b2));
       izt.mulScalar(z);
 
-      const izn = tri.n0.clone().mulScalar(b0).add(tri.n1.clone().mulScalar(b1)).add(tri.n2.clone().mulScalar(b2));
+      izn.copy(tri.n0).mulScalar(b0).add(tmp.copy(tri.n1).mulScalar(b1)).add(tmp.copy(tri.n2).mulScalar(b2));
       izn.mulScalar(z);
 
       const pxlData = shader.fragmentFunc(v, izt, izn, new Vec3(b0, b1, b2).mulScalar(z));

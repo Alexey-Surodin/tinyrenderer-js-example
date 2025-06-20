@@ -15,7 +15,6 @@ export class Model {
   normalTangentTexture?: TgaImage;
 
   parse(text: string): this {
-
     const lines = text.split(/\r?\n/);
 
     for (const line of lines) {
@@ -23,9 +22,11 @@ export class Model {
 
       if (str[0] == 'v') {
         const v = new Array<number>();
-        for (let i = 1; i < str.length; i++)
-          v.push(parseFloat(str[i]));
         this.vert.push(v);
+
+        for (let i = 1; i < str.length; i++) {
+          v.push(parseFloat(str[i]));
+        }
       }
       else if (str[0] == 'f') {
         const face = Array<Array<number>>();
@@ -33,29 +34,32 @@ export class Model {
         for (let i = 1; i < str.length; i++) {
           const f_str = str[i].split('/');
           const f = Array<number>();
+          face.push(f);
+
           for (let j = 0; j < f_str.length; j++) {
             f.push(parseInt(f_str[j]) - 1);
           }
-          face.push(f);
         }
+
         this.faces.push(face);
       }
       else if (str[0] == 'vt') {
         const t = new Array<number>();
+        this.text.push(t);
+
         for (let i = 1; i < str.length; i++) {
           t.push(parseFloat(str[i]));
         }
-        this.text.push(t);
       }
       else if (str[0] == 'vn') {
         const n = new Array<number>();
+        this.norm.push(n);
+
         for (let i = 1; i < str.length; i++) {
           n.push(parseFloat(str[i]));
         }
-        this.norm.push(n);
       }
     }
-
     return this;
   }
 

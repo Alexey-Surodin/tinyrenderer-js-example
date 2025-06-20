@@ -64,7 +64,6 @@ function readRleImageData(header: TgaHeader, dataView: DataView): Uint8Array {
     const pixelCount = (packetHeader & 0x7F) + 1;
 
     if (!isRunLengthPacket) {
-      //raw packet
       const nbytes = pixelCount * bpp;
       const pixelData = new Uint8Array(dataView.buffer, offset, nbytes);
 
@@ -73,7 +72,6 @@ function readRleImageData(header: TgaHeader, dataView: DataView): Uint8Array {
       offset += nbytes;
     }
     else {
-      //rle packet
       const pixelData = new Uint8Array(dataView.buffer, offset, bpp);
       offset += bpp;
 
@@ -88,7 +86,6 @@ function readRleImageData(header: TgaHeader, dataView: DataView): Uint8Array {
 }
 
 export function readTgaImage(array: Uint8Array): TgaImage {
-  //read header
   const dataView = new DataView(array.buffer);
   const header = readTgaHeader(dataView);
   const formats = Object.values(TgaBppFormat);
@@ -123,7 +120,6 @@ export function readTgaImage(array: Uint8Array): TgaImage {
 }
 
 export function getTexturePixel(point: Vec3, texture: TgaImage): Color {
-
   const width = texture.header.width;
   const height = texture.header.height;
   const imageData = texture.imageData;
@@ -164,11 +160,8 @@ export function getTexturePixelAsVec3(point: Vec3, texture: TgaImage): Vec3 {
 }
 
 export async function readTexture(path: string | URL): Promise<TgaImage> {
-
   const file = await fetch(path);
-
   const byteArray = await file.bytes();
-
   return readTgaImage(byteArray);
 }
 
@@ -185,9 +178,7 @@ export function generateTestDiffuseTexture(w: number, h: number, cellSize: numbe
   let index = 0;
 
   for (let y = 0; y < h; y++) {
-
     for (let x = 0; x < w; x++) {
-
       const oddX = Math.ceil(x / cellSize) % 2 == 0;
       const oddY = Math.ceil(y / cellSize) % 2 == 0;
 
@@ -204,23 +195,19 @@ export function generateTestDiffuseTexture(w: number, h: number, cellSize: numbe
   };
 }
 
-export function generateTestNormalTexture(w: number, h: number, norm: Vec3): TgaImage {
+export function generateTestNormalTexture(w: number, h: number, n: Vec3): TgaImage {
+  const imageData = new Uint8Array(w * h * 3);
   const header = new TgaHeader();
   header.width = w;
   header.height = h;
   header.bitsperpixel = 3 * 8;
+  n.norm().addScalar(1).mulScalar(255 / 2).round();
 
-  const imageData = new Uint8Array(w * h * 3);
-
-  let index = 0;
-
-  norm.norm().addScalar(1).mulScalar(255 / 2).round();
-
-  for (let y = 0; y < h; y++) {
+  for (let y = 0, index = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
-      imageData[index++] = norm.z;
-      imageData[index++] = norm.y;
-      imageData[index++] = norm.x;
+      imageData[index++] = n.z;
+      imageData[index++] = n.y;
+      imageData[index++] = n.x;
     }
   }
 

@@ -1,11 +1,32 @@
-import { getTexturePixel } from "../../utils/tgaImage";
-import { Triangle, Vec3, Color, Matrix4 } from "../../utils/utils";
+import { getTexturePixel, TgaImage } from "../../utils/tgaImage";
+import { Triangle, Vec3, Color } from "../../utils/utils";
+import { Camera } from "../camera";
+import { Light } from "../light";
+import { Model } from "../model";
 import { Shader, UniformBase } from "./shaderBase";
 
-export class GouraudShader extends Shader<UniformBase> {
+export type GouraudShaderUniform = UniformBase & {
+  faceLightning: Vec3[],
+  lightsDir: Vec3[],
+  diffuseMap?: TgaImage,
+  color?: Color,
+};
+
+export class GouraudShader extends Shader<GouraudShaderUniform> {
   readonly name = 'Gouraud Shader';
 
-  faceLightning: Vec3[] = [];
+  override updateUniform(camera: Camera, lights: Light[], model: Model): void {
+    super.updateUniform(camera, lights, model);
+
+    const dir = new Vec3();
+    this.uniform.lightsDir = [];
+    for (const light of lights) {
+      dir.copy(light.direction).negate();
+      this.uniform.lightsDir.push(this.uniform.viewMatrix.multiplyVec3(dir).norm());
+    }
+
+    this.uniform.diffuseMap = model.diffuseTexture;
+  }
 
   vertexFunc(tri: Triangle): Triangle {
     const viewProjMatrix = this.uniform.viewProjMatrix;
@@ -19,16 +40,16 @@ export class GouraudShader extends Shader<UniformBase> {
     tri.n2 = viewInverse.multiplyVec3(tri.n2).norm();
 
     const lights = this.uniform.lights;
-    this.faceLightning = [];
+    this.uniform.faceLightning = [];
+
     for (let i = 0; i < lights.length; i++) {
-      const dir = lights[i].direction.clone().negate();
-      const lightDir = this.uniform.viewMatrix.multiplyVec3(dir).norm();
+      const lightDir = this.uniform.lightsDir[i];
 
       const v = new Vec3();
       v.x = Math.max(0, tri.n0.dot(lightDir));
       v.y = Math.max(0, tri.n1.dot(lightDir));
       v.z = Math.max(0, tri.n2.dot(lightDir));
-      this.faceLightning.push(v);
+      this.uniform.faceLightning.push(v);
     }
 
     return tri;
@@ -37,10 +58,10 @@ export class GouraudShader extends Shader<UniformBase> {
   fragmentFunc(p: Vec3, t: Vec3, n: Vec3, b: Vec3): { pxl: Vec3; color: Color; } | null {
     const lights = this.uniform.lights;
     const lightSumColor: Color = new Color(0, 0, 0, 255);
-    let surfaceColor: Color = new Color(255, 255, 255, 255);
+    let surfaceColor: Color;
 
     for (let i = 0; i < lights.length; i++) {
-      const intensity = Math.max(this.faceLightning[i].dot(b), 0);
+      const intensity = Math.max(this.uniform.faceLightning[i].dot(b), 0);
       lightSumColor.addColor(lights[i].color.clone().mulScalar(intensity));
     }
 
@@ -50,18 +71,18 @@ export class GouraudShader extends Shader<UniformBase> {
     else if (this.uniform.color) {
       surfaceColor = this.uniform.color;
     }
+    else {
+      surfaceColor = new Color(255, 255, 255, 255);
+    }
 
     return { pxl: p, color: surfaceColor.mul(lightSumColor) };
   }
 
   static init(): GouraudShader {
-    return new GouraudShader({
-      lights: [],
-      viewMatrix: new Matrix4(),
-      viewInverse: new Matrix4(),
-      viewPortMatrix: new Matrix4(),
-      viewProjMatrix: new Matrix4(),
-      shadowM: new Matrix4(),
-    });
+    const gouraudUniform = {
+      lightsDir: [],
+      faceLightning: [],
+    };
+    return new GouraudShader(Object.assign(Shader.getBaseUniform(), gouraudUniform));
   }
 }

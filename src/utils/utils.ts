@@ -71,10 +71,6 @@ export class Color {
   }
 }
 
-export class Vec2 {
-  constructor(public x: number = 0, public y: number = 0) { }
-}
-
 export class Vec3 {
   constructor(public x: number = 0, public y: number = 0, public z: number = 0) { }
 
@@ -127,6 +123,13 @@ export class Vec3 {
 
   clone(): Vec3 {
     return new Vec3(this.x, this.y, this.z);
+  }
+
+  copy(v: Vec3):this{
+    this.x = v.x;
+    this.y = v.y;
+    this.z = v.z;
+    return this;
   }
 
   length(): number {
@@ -240,7 +243,6 @@ export class Matrix4 {
   }
 
   multiply(m: Matrix4): this {
-
     const a = Array.from(this.data);
     const b = m.data;
 
