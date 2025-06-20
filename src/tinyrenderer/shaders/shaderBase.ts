@@ -8,6 +8,7 @@ export type UniformBase = {
   viewProjMatrix: Matrix4,
   viewPortMatrix: Matrix4,
   viewInverse: Matrix4,
+  shadowM: Matrix4,
   lights: Light[],
 
   diffuseMap?: TgaImage,
@@ -53,7 +54,8 @@ export class DepthShader extends Shader<UniformBase> {
       viewMatrix: new Matrix4(),
       viewInverse: new Matrix4(),
       viewPortMatrix: new Matrix4(),
-      viewProjMatrix: new Matrix4()
+      viewProjMatrix: new Matrix4(),
+      shadowM: new Matrix4(),
     });
   }
 }

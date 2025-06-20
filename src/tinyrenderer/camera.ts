@@ -8,8 +8,8 @@ export abstract class Camera {
 
   }
 
-  setViewPort(width: number, height: number, depth: number): this {
-    this.viewport = new Vec3(width, height, depth);
+  setViewPort(v: Vec3): this {
+    this.viewport = v;
     return this;
   }
 

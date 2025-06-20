@@ -373,7 +373,7 @@ export function getPixelIndex(point: Vec3, width: number, height: number): numbe
 }
 
 export function setPixel(imageData: ImageData, point: Vec3, color: Color, zBuffer?: Uint8ClampedArray): void {
-  if (point.x > imageData.width || point.y > imageData.height || point.z > 255 || point.z < 0)
+  if (point.x > imageData.width || point.x  < 0 || point.y > imageData.height || point.y < 0 || point.z > 255 || point.z < 0)
     return;
 
   let index = getPixelIndex(point, imageData.width, imageData.height);

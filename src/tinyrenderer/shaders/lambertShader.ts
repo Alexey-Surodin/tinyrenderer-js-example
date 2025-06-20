@@ -1,5 +1,5 @@
 import { getTexturePixel, getTexturePixelAsVec3, TgaImage } from "../../utils/tgaImage";
-import { Color, getTangentBasis, getTriNormal, Matrix4, Triangle, Vec3 } from "../../utils/utils";
+import { Color, getPixelIndex, getTangentBasis, Matrix4, Triangle, Vec3 } from "../../utils/utils";
 import { RenderOptions } from "../renerOptions";
 import { Shader, UniformBase } from "./shaderBase";
 
@@ -22,6 +22,7 @@ export class LambertShader extends Shader<LambertShaderUniform> {
       viewInverse: new Matrix4(),
       viewPortMatrix: new Matrix4(),
       viewProjMatrix: new Matrix4(),
+      shadowM: new Matrix4(),
       factor: Math.max(Math.min(factor, 1), 0),
     });
   }
@@ -80,7 +81,20 @@ export class LambertShader extends Shader<LambertShaderUniform> {
     for (const light of lights) {
       const dir = light.direction.clone().negate();
       const lightDir = this.uniform.viewMatrix.multiplyVec3(dir).norm();
-      const intensity = Math.max((normal.dot(lightDir) + factor), 0) / (1 + factor);
+      let intensity = Math.max((normal.dot(lightDir) + factor), 0) / (1 + factor);
+
+      if (RenderOptions.shadowPassEnable && light.shadowMap) {
+        const shadow = light.shadowMap;
+        const pWorld = this.uniform.shadowM.multiplyVec3(p, 1.0)
+        const point = shadow.matrix.multiplyVec3(pWorld, 1.0);
+        if (point.x >= 0 && point.y >= 0 && point.x < shadow.viewport.x && point.y < shadow.viewport.y) {
+          const index = getPixelIndex(point, shadow.viewport.x, shadow.viewport.y);
+          const sh = shadow.map[index];
+          if (sh + 1 < point.z)
+            intensity *= 0.3;
+        }
+      }
+
       lightSumColor.addColor(light.color.clone().mulScalar(intensity));
     }
 

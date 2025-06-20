@@ -23,6 +23,7 @@ async function main(): Promise<void> {
   renderGui.add(RenderOptions, "useOrthoCamera");
   renderGui.add(RenderOptions, "useZBuffer");
   renderGui.add(RenderOptions, "useTangentNormalMap");
+  renderGui.add(RenderOptions, "shadowPassEnable");
   renderGui.add(RenderOptions, "rotate");
 
   const head = new Model().parse(AfricanHeadModel.head);

@@ -60,7 +60,8 @@ export class GouraudShader extends Shader<UniformBase> {
       viewMatrix: new Matrix4(),
       viewInverse: new Matrix4(),
       viewPortMatrix: new Matrix4(),
-      viewProjMatrix: new Matrix4()
+      viewProjMatrix: new Matrix4(),
+      shadowM: new Matrix4(),
     });
   }
 }

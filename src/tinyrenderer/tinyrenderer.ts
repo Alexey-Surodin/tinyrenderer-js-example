@@ -1,10 +1,10 @@
-import { clearImage, Color, getCanvas, setPixel, Triangle } from "../utils/utils";
+import { clearImage, Color, getCanvas, getPixelIndex, setPixel, Triangle } from "../utils/utils";
 import { Model } from "./model";
 import { Vec3 } from "../utils/utils";
 import { Camera, OrthographicCamera, PerspectiveCamera } from "./camera";
 import { linearInterpolation } from "./linearInterpolation";
 import { barycentricInterpolation } from "./barycentricInterpolation";
-import { ShaderBase } from "./shaders/shaderBase";
+import { DepthShader } from "./shaders/shaderBase";
 import { Light } from "./light";
 import { move } from "../cameraControl";
 import { RenderOptions } from "./renerOptions";
@@ -12,28 +12,19 @@ import { RenderOptions } from "./renerOptions";
 const clearColor = new Color(0, 0, 0, 255);
 const perspectiveCamera = new PerspectiveCamera(new Vec3(0, 0, 2), new Vec3(0, 0, 0), new Vec3(0, 1, 0));
 const orthoCamera = new OrthographicCamera(new Vec3(0, 0.1, 2), new Vec3(0, 0, 0), new Vec3(0, 1, 0), 4, 4);
+const shadowCamera = new OrthographicCamera(new Vec3(0, 0.1, 2), new Vec3(0, 0, 0), new Vec3(0, 1, 0), 4, 4);
+const shadowPassShader = DepthShader.init();
 
-const DirWhiteLight = new Light(new Vec3(), new Vec3(0, -1, -1), new Color(255, 255, 255, 255));
-const DirectionalLightRed = new Light(new Vec3(), new Vec3(0, 0, 1), new Color(255, 0, 0, 255));
-const DirectionalLightGreen = new Light(new Vec3(), new Vec3(1, 0, 0), new Color(0, 255, 0, 255));
-const DirectionalLightBlue = new Light(new Vec3(), new Vec3(-1, 0, 0), new Color(0, 0, 255, 255));
-
-function drawTriangle(imageData: ImageData, tri: Triangle, shader: ShaderBase, zBuffer?: Uint8ClampedArray): void {
-  if (RenderOptions.useBarycentricInterpolation)
-    barycentricInterpolation(tri, shader, (pxlData: { pxl: Vec3, color: Color }) => setPixel(imageData, pxlData.pxl, pxlData.color, zBuffer));
-  else
-    linearInterpolation(tri, shader, (pxlData: { pxl: Vec3, color: Color }) => setPixel(imageData, pxlData.pxl, pxlData.color, zBuffer));
-}
-
-function drawModel(imageData: ImageData, model: Model, camera: Camera, lights: Light[], zBuffer?: Uint8ClampedArray): void {
+function drawModel(model: Model, camera: Camera, lights: Light[], onPixelCallback: (pxlData: { pxl: Vec3, color: Color }) => void): void {
   const shader = model.shader;
   if (!shader)
     return;
   // update unifrom
-  shader.uniform.viewMatrix = camera.getViewMatrix();
-  shader.uniform.viewProjMatrix = camera.getViewProjMatrix();
-  shader.uniform.viewInverse = camera.getViewMatrix().inverse().transpose();
-  shader.uniform.viewPortMatrix = camera.getViewPortMatrix();
+  const viewM = shader.uniform.viewMatrix = camera.getViewMatrix();
+  const viewprojM = shader.uniform.viewProjMatrix = camera.getViewProjMatrix();
+  shader.uniform.viewInverse = viewM.clone().inverse().transpose();
+  const viewportM = shader.uniform.viewPortMatrix = camera.getViewPortMatrix();
+  shader.uniform.shadowM = (viewportM.clone().multiply(viewprojM)).inverse();
   shader.uniform.lights = lights;
   shader.uniform.diffuseMap = model.diffuseTexture;
   shader.uniform.normalMap = model.normalTexture;
@@ -54,7 +45,10 @@ function drawModel(imageData: ImageData, model: Model, camera: Camera, lights: L
       n2: model.getNormal(i, 2),
     }
 
-    drawTriangle(imageData, triangle, shader, zBuffer);
+    if (RenderOptions.useBarycentricInterpolation)
+      barycentricInterpolation(triangle, shader, onPixelCallback);
+    else
+      linearInterpolation(triangle, shader, onPixelCallback);
   }
 }
 
@@ -85,11 +79,12 @@ export async function render(models: Model[]): Promise<void> {
     throw new Error("Failed to get 2d canvas context");
 
   const canvasRect = canvas.getBoundingClientRect();
-  const imageData = context.createImageData(canvasRect.width, canvasRect.height);
+  const viewport = new Vec3(canvasRect.width, canvasRect.height, 255);
+  const imageData = context.createImageData(viewport.x, viewport.y);
   clearImage(imageData, clearColor);
 
   const camera = RenderOptions.useOrthoCamera ? orthoCamera : perspectiveCamera;
-  camera.setViewPort(canvasRect.width, canvasRect.height, 255);
+  camera.setViewPort(viewport);
 
   let zBuffer: Uint8ClampedArray | undefined;
   if (RenderOptions.useZBuffer) {
@@ -97,10 +92,17 @@ export async function render(models: Model[]): Promise<void> {
     zBuffer.fill(255);
   }
 
-  const lights = [DirectionalLightRed, DirectionalLightGreen, DirectionalLightBlue, DirWhiteLight];
+  //const lights = [RenderOptions.DirWhiteLight, RenderOptions.DirectionalLightGreen, RenderOptions.DirectionalLightBlue, RenderOptions.DirectionalLightRed];
+  const lights = [RenderOptions.DirWhiteLight];
+
+  if (RenderOptions.shadowPassEnable) {
+    for (const light of lights) {
+      shadowPass(models, light, viewport);
+    }
+  }
 
   for (const model of models) {
-    drawModel(imageData, model, camera, lights, zBuffer);
+    drawModel(model, camera, lights, (pxlData: { pxl: Vec3, color: Color }) => setPixel(imageData, pxlData.pxl, pxlData.color, zBuffer));
   }
 
   context.putImageData(imageData, 0, 0);
@@ -125,4 +127,35 @@ export async function runRenderLoop(models: Model[]): Promise<() => void> {
   requestHandle = requestAnimationFrame(frame);
 
   return cancel;
+}
+
+async function shadowPass(models: Model[], light: Light, viewport: Vec3) {
+  shadowCamera.eye.mulScalar(0).add(light.position);
+  shadowCamera.setViewPort(viewport);
+
+  const size = viewport.x * viewport.y;
+
+  if (light.shadowMap?.map?.length != size) {
+    const zBuffer = new Uint8ClampedArray(size);
+    const viewProjM = shadowCamera.getViewProjMatrix();
+    const viewPortM = shadowCamera.getViewPortMatrix();
+    const shadowMat = viewPortM.multiply(viewProjM);
+    light.shadowMap = { viewport: viewport, map: zBuffer, matrix: shadowMat };
+  }
+  const shadow = light.shadowMap;
+  shadow.map.fill(255);
+
+  const setDepth = (pxlData: { pxl: Vec3, color: Color }) => {
+    const index = getPixelIndex(pxlData.pxl, viewport.x, viewport.y);
+    if (index < size && pxlData.pxl.z < shadow.map[index]) {
+      shadow.map[index] = Math.round(pxlData.pxl.z);
+    }
+  }
+
+  for (const model of models) {
+    const modleShader = model.shader;
+    model.shader = shadowPassShader;
+    drawModel(model, shadowCamera, [light], setDepth);
+    model.shader = modleShader;
+  }
 }

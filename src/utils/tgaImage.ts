@@ -179,8 +179,8 @@ export function generateTestDiffuseTexture(w: number, h: number, cellSize: numbe
   header.bitsperpixel = 3 * 8;
 
   const imageData = new Uint8Array(w * h * 3);
-  const red = [255, 0, 0];
-  const green = [0, 255, 0];
+  const gray = [100, 100, 100];
+  const darkGray = [40, 40, 40];
 
   let index = 0;
 
@@ -191,7 +191,7 @@ export function generateTestDiffuseTexture(w: number, h: number, cellSize: numbe
       const oddX = Math.ceil(x / cellSize) % 2 == 0;
       const oddY = Math.ceil(y / cellSize) % 2 == 0;
 
-      const color = oddX !== oddY ? red : green;
+      const color = oddX !== oddY ? gray : darkGray;
       imageData[index++] = color[2];
       imageData[index++] = color[1];
       imageData[index++] = color[0];
