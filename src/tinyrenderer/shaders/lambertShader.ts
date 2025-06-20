@@ -95,7 +95,7 @@ export class LambertShader extends Shader<LambertShaderUniform> {
         }
       }
 
-      lightSumColor.addColor(light.color.clone().mulScalar(intensity));
+      lightSumColor.addColor(light.color.clone().premultiplyAlpha().mulScalar(intensity));
     }
 
     if (this.uniform.diffuseMap) {

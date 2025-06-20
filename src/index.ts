@@ -50,6 +50,12 @@ async function main(): Promise<void> {
 
   const models = [head, innerEye, checkboard];
 
+  const lightGUI = gui.addFolder('Light');
+  lightGUI.addFolder('White').add(RenderOptions.DirWhiteLight.color, 'a', 0, 255, 1);
+  lightGUI.addFolder('Blue').add(RenderOptions.DirectionalLightBlue.color, 'a', 0, 255, 1);
+  lightGUI.addFolder('Green').add(RenderOptions.DirectionalLightGreen.color, 'a', 0, 255, 1);
+  lightGUI.addFolder('Red').add(RenderOptions.DirectionalLightRed.color, 'a', 0, 255, 1);
+
   render(models);
 
   let cancelLoop: (() => void) | undefined;

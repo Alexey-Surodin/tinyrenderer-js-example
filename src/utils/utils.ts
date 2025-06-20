@@ -58,6 +58,14 @@ export class Color {
     return this;
   }
 
+  premultiplyAlpha(): this {
+    const a = this.a / 255;
+    this.r *= a;
+    this.g *= a;
+    this.b *= a;
+    return this;
+  }
+
   clone(): Color {
     return new Color(this.r, this.g, this.b, this.a);
   }

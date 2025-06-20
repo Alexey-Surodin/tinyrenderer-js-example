@@ -92,8 +92,7 @@ export async function render(models: Model[]): Promise<void> {
     zBuffer.fill(255);
   }
 
-  //const lights = [RenderOptions.DirWhiteLight, RenderOptions.DirectionalLightGreen, RenderOptions.DirectionalLightBlue, RenderOptions.DirectionalLightRed];
-  const lights = [RenderOptions.DirWhiteLight];
+  const lights = [RenderOptions.DirWhiteLight, RenderOptions.DirectionalLightGreen, RenderOptions.DirectionalLightBlue, RenderOptions.DirectionalLightRed];
 
   if (RenderOptions.shadowPassEnable) {
     for (const light of lights) {
